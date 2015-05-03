@@ -14,12 +14,6 @@ from geosurf.qgs_tools import loaded_point_layers, get_point_data
 class EqHazard_QWidget( QWidget ):
     
     
-    input_plane_azimuth_types = ["dip dir.", "strike rhr"]
-    input_plane_dip_types = ["dip angle"]    
-
-    input_line_azimuth_types = ["trend"]
-    input_line_dip_types = ["plunge"] 
-    
     
     def __init__( self, canvas, plugin_name ):
 
@@ -47,9 +41,9 @@ class EqHazard_QWidget( QWidget ):
         
         layout = QVBoxLayout() 
         
-        self.define_point_layer_QPushButton = QPushButton(self.tr("Define point layer"))  
-        self.define_point_layer_QPushButton.clicked.connect( self.define_structural_input_params ) 
-        layout.addWidget(self.define_point_layer_QPushButton )
+        self.read_input_data_QPushButton = QPushButton(self.tr("Read input file"))  
+        self.read_input_data_QPushButton.clicked.connect( self.get_input_data ) 
+        layout.addWidget(self.read_input_data_QPushButton )
         
         input_QGroupBox.setLayout(layout)
         
@@ -62,66 +56,32 @@ class EqHazard_QWidget( QWidget ):
         
         layout = QGridLayout()
 
-        self.plot_stereonet_QPushButton = QPushButton(self.tr("Plot stereonet"))          
-        self.plot_stereonet_QPushButton.clicked.connect( self.process_geodata )         
-        layout.addWidget(self.plot_stereonet_QPushButton, 0, 0, 1, 1 )
-        
-        self.plot_all_data_QRadioButton = QRadioButton("all data")
-        self.plot_all_data_QRadioButton.setChecked(True)
-        layout.addWidget(self.plot_all_data_QRadioButton, 0,1,1,1)
-
-        self.plot_selected_data_QRadioButton = QRadioButton("selection")
-        layout.addWidget(self.plot_selected_data_QRadioButton, 0,2,1,1)
+        self.plot_data_QPushButton = QPushButton(self.tr("Plot data"))          
+        self.plot_data_QPushButton.clicked.connect( self.plot_geodata )         
+        layout.addWidget(self.plot_data_QPushButton, 0, 0, 1, 1 )        
                 
         processing_QGroupBox.setLayout(layout)
         
         return processing_QGroupBox
     
 
-    def define_structural_input_params( self ):
+    def get_input_data( self ):
         
-        self.structural_input_params = None   
-
-        if len( loaded_point_layers()  ) == 0:
-            self.warn( "No available point layers" )
-            return            
-
-        dialog = SourcePointLayerDialog()
+        
+        dialog = SourceDataDialog()
 
         if dialog.exec_():
             try:
-                point_layer, structural_input_params = self.get_structural_input_params( dialog )
+                input_data = self.extract_input_data( dialog )
             except:
-                self.warn( "Incorrect definition")
+                self.warn( "Error in input")
                 return 
         else:
             self.warn( "Nothing defined")
             return
 
-        if not self.formally_valid_params( structural_input_params ):
-            self.warn( "Invalid parameters")
-            return
-        else:
-            self.info("Input data defined")
-        
-        self.point_layer = point_layer
-        self.structural_input_params = structural_input_params
 
-
-    def formally_valid_params(self, structural_input_params ):
-
-        if structural_input_params["plane_azimuth_name_field"] is not None and \
-           structural_input_params["plane_dip_name_field"] is not None:
-            return True
-        
-        if structural_input_params["line_azimuth_name_field"] is not None and \
-           structural_input_params["line_dip_name_field"] is not None:
-            return True
-        
-        return False
-
-
-    def get_structural_input_params(self, dialog ):
+    def extract_input_data(self, dialog ):
         
         point_layer = dialog.point_layer
         
@@ -157,124 +117,14 @@ class EqHazard_QWidget( QWidget ):
             return val
 
 
-    def get_actual_field_names(self):
-        
-        actual_field_names = []
-        
-        usable_fields = [self.structural_input_params["plane_azimuth_name_field"],
-                         self.structural_input_params["plane_dip_name_field"],
-                         self.structural_input_params["line_azimuth_name_field"],
-                         self.structural_input_params["line_dip_name_field"] ]
-        
-        for usable_fld in usable_fields:
-            if usable_fld is not None:
-                actual_field_names.append(usable_fld)
-
-        return actual_field_names
-
-
-    def get_actual_data_type(self):
-        
-        # define type for planar data
-        if self.structural_input_params["plane_azimuth_name_field"] is not None and \
-           self.structural_input_params["plane_dip_name_field"] is not None:            
-            planar_data = True
-            if self.structural_input_params["plane_azimuth_type"] ==  "dip dir.":
-                planar_az_type = "dip_dir"
-            elif self.structural_input_params["plane_azimuth_type"] ==  "strike rhr":
-                planar_az_type = "strike_rhr"
-            planar_dip_type = "dip"
-        else:
-            planar_data = False
-            planar_az_type = None
-            planar_dip_type = None
- 
-        # define type for linear data            
-        if self.structural_input_params["line_azimuth_name_field"] is not None and \
-           self.structural_input_params["line_dip_name_field"] is not None:            
-            linear_data = True
-            linear_az_type = "trend"
-            linear_dip_type = "plunge"  
-        else:
-            linear_data = False
-            linear_az_type = None
-            linear_dip_type = None
-                   
-        
-        return dict(planar_data = planar_data,
-                    planar_az_type = planar_az_type,
-                    planar_dip_type = planar_dip_type,
-                    linear_data = linear_data,
-                    linear_az_type = linear_az_type,
-                    linear_dip_type = linear_dip_type)
-        
-        
     def process_geodata(self):
         
-        # get used field names in the point attribute table 
-        self.actual_field_names = self.get_actual_field_names()
-        
-        # get input data presence and type
-        self.actual_data_type = self.get_actual_data_type()
-        
-        # decide if using all data or just selected ones
-        if self.plot_all_data_QRadioButton.isChecked():
-            selected = False
-        else:
-            selected = True  
-                 
-        _, structural_data = get_point_data(self.point_layer, self.actual_field_names, selected)
-        
-        input_data_types = self.get_actual_data_type()
-           
-        try:  
-            _, plane_orientations, lineament_orientations = self.parse_geodata(input_data_types, structural_data)  
-        except Exception, msg:
-            self.warn(str(msg))
-            return
-        
-        plot_stereonet(plane_orientations, lineament_orientations)
+        pass
          
 
-    def parse_geodata(self, input_data_types, structural_data):
+    def plot_geodata(self, input_data_types, structural_data):
+        pass    
         
-        xy_vals = [ (float(rec[0]), float(rec[1]) ) for rec in structural_data]
-        
-        try:
-            if input_data_types["planar_data"]:            
-                if input_data_types["planar_az_type"] == "dip_dir":
-                    dipdir_vals = [ float(rec[2]) for rec in structural_data]
-                elif input_data_types["planar_az_type"] == "strike_rhr":
-                    dipdir_raw_vals = [ float(rec[2]) + 90.0 for rec in structural_data]
-                    dipdir_vals = [ val if val < 360.0 else val - 360.0 for val in dipdir_raw_vals ]
-                dipangle_vals = [ float(rec[3]) for rec in structural_data]
-                plane_vals = zip(dipdir_vals, dipangle_vals)
-                line_data_ndx_start = 4            
-            else:
-                plane_vals = None
-                line_data_ndx_start = 2
-        except:
-            raise Exception, "Error in planar data"
-             
-        try:   
-            if input_data_types["linear_data"]:
-                line_vals = [ (float(rec[line_data_ndx_start]), float(rec[line_data_ndx_start + 1])) for rec in structural_data]
-            else:
-                line_vals = None     
-        except:
-            raise Exception, "Error in linear data"
-                    
-        return xy_vals, plane_vals, line_vals
-    
-                  
-    def open_help_page(self):
-        
-        import webbrowser
-        local_url = os.path.dirname(os.path.realpath(__file__)) + os.sep + "help" + os.sep + "help.html"
-        local_url = local_url.replace("\\","/")
-        if not webbrowser.open(local_url):
-            self.warn("Error with browser.\nOpen manually help/help.html")
-
         
     def info(self, msg):
         
@@ -287,12 +137,12 @@ class EqHazard_QWidget( QWidget ):
         
         
         
-class SourcePointLayerDialog( QDialog ):
+class SourceDataDialog( QDialog ):
     
     
     def __init__(self, parent=None):
                 
-        super( SourcePointLayerDialog, self ).__init__(parent)
+        super( SourceDataDialog, self ).__init__(parent)
         
         self.setup_gui()
         
@@ -321,14 +171,14 @@ class SourcePointLayerDialog( QDialog ):
         plane_QGridLayout = QGridLayout()    
 
         self.input_plane_orient_azimuth_type_QComboBox = QComboBox()
-        self.input_plane_orient_azimuth_type_QComboBox.addItems(EqHazard_QWidget.input_plane_azimuth_types)
+
         plane_QGridLayout.addWidget(self.input_plane_orient_azimuth_type_QComboBox, 0,0,1,1)   
                 
         self.input_plane_azimuth_srcfld_QComboBox = QComboBox()
         plane_QGridLayout.addWidget(self.input_plane_azimuth_srcfld_QComboBox, 0,1,1,1)       
  
         self.input_plane_orient_dip_type_QComboBox = QComboBox()
-        self.input_plane_orient_dip_type_QComboBox.addItems(EqHazard_QWidget.input_plane_dip_types)
+
         plane_QGridLayout.addWidget(self.input_plane_orient_dip_type_QComboBox, 1,0,1,1) 
         
         self.input_plane_dip_srcfld_QComboBox = QComboBox()
@@ -344,14 +194,14 @@ class SourcePointLayerDialog( QDialog ):
         line_QGridLayout = QGridLayout() 
         
         self.input_line_orient_azimuth_type_QComboBox = QComboBox()
-        self.input_line_orient_azimuth_type_QComboBox.addItems(EqHazard_QWidget.input_line_azimuth_types)
+
         line_QGridLayout.addWidget(self.input_line_orient_azimuth_type_QComboBox, 0,0,1,1)   
                 
         self.input_line_azimuth_srcfld_QComboBox = QComboBox()
         line_QGridLayout.addWidget(self.input_line_azimuth_srcfld_QComboBox, 0,1,1,1)    
         
         self.input_line_orient_dip_type_QComboBox = QComboBox()
-        self.input_line_orient_dip_type_QComboBox.addItems(EqHazard_QWidget.input_line_dip_types)
+
         line_QGridLayout.addWidget(self.input_line_orient_dip_type_QComboBox, 1,0,1,1) 
         
         self.input_line_dip_srcfld_QComboBox = QComboBox()

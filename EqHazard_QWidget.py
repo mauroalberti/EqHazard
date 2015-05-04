@@ -86,27 +86,11 @@ class EqHazard_QWidget( QWidget ):
         point_layer = dialog.point_layer
         
         field_undefined_txt = dialog.field_undefined_txt
-        
-        plane_azimuth_type = dialog.input_plane_orient_azimuth_type_QComboBox.currentText()
-        plane_azimuth_name_field = self.parse_field_choice(dialog.input_plane_azimuth_srcfld_QComboBox.currentText(), field_undefined_txt)
+
+        link_name_field = self.parse_field_choice(dialog.link_field_QComboBox.currentText(), field_undefined_txt)
             
-        plane_dip_type = dialog.input_plane_orient_dip_type_QComboBox.currentText()        
-        plane_dip_name_field = self.parse_field_choice(dialog.input_plane_dip_srcfld_QComboBox.currentText(), field_undefined_txt)       
-                    
-        line_azimuth_type = dialog.input_line_orient_azimuth_type_QComboBox.currentText()
-        line_azimuth_name_field = self.parse_field_choice( dialog.input_line_azimuth_srcfld_QComboBox.currentText(), field_undefined_txt)
-                    
-        line_dip_type = dialog.input_line_orient_dip_type_QComboBox.currentText()        
-        line_dip_name_field = self.parse_field_choice( dialog.input_line_dip_srcfld_QComboBox.currentText(), field_undefined_txt)
-        
-        return point_layer, dict(plane_azimuth_type = plane_azimuth_type,
-                                plane_azimuth_name_field = plane_azimuth_name_field,
-                                plane_dip_type = plane_dip_type,
-                                plane_dip_name_field = plane_dip_name_field,
-                                line_azimuth_type = line_azimuth_type,
-                                line_azimuth_name_field = line_azimuth_name_field,
-                                line_dip_type = line_dip_type,
-                                line_dip_name_field = line_dip_name_field)
+
+        return point_layer, link_name_field 
     
 
     def parse_field_choice(self, val, choose_message):
@@ -165,60 +149,22 @@ class SourceDataDialog( QDialog ):
         layer_QGroupBox.setLayout(layer_QGridLayout)              
         layout.addWidget(layer_QGroupBox, 0,0,1,2)          
 
-        # plane values
+        # link field
                 
-        plane_QGroupBox = QGroupBox("Planar orientation source fields")
-        plane_QGridLayout = QGridLayout()    
+        linkfield_QGroupBox = QGroupBox("Link field")
+        linkfield_QGridLayout = QGridLayout()    
 
-        self.input_plane_orient_azimuth_type_QComboBox = QComboBox()
+        self.link_field_QComboBox = QComboBox()
 
-        plane_QGridLayout.addWidget(self.input_plane_orient_azimuth_type_QComboBox, 0,0,1,1)   
+        linkfield_QGridLayout.addWidget(self.link_field_QComboBox, 0,0,1,1)   
+
+        linkfield_QGroupBox.setLayout(linkfield_QGridLayout)              
+        layout.addWidget(linkfield_QGroupBox, 1,0,2,2)
+             
                 
-        self.input_plane_azimuth_srcfld_QComboBox = QComboBox()
-        plane_QGridLayout.addWidget(self.input_plane_azimuth_srcfld_QComboBox, 0,1,1,1)       
- 
-        self.input_plane_orient_dip_type_QComboBox = QComboBox()
-
-        plane_QGridLayout.addWidget(self.input_plane_orient_dip_type_QComboBox, 1,0,1,1) 
+        self.refresh_input_layer_combobox()
         
-        self.input_plane_dip_srcfld_QComboBox = QComboBox()
-        plane_QGridLayout.addWidget(self.input_plane_dip_srcfld_QComboBox, 1,1,1,1)         
-
-        plane_QGroupBox.setLayout(plane_QGridLayout)              
-        layout.addWidget(plane_QGroupBox, 1,0,2,2)
-        
-
-        # line values
-        
-        line_QGroupBox = QGroupBox("Line orientation source fields")
-        line_QGridLayout = QGridLayout() 
-        
-        self.input_line_orient_azimuth_type_QComboBox = QComboBox()
-
-        line_QGridLayout.addWidget(self.input_line_orient_azimuth_type_QComboBox, 0,0,1,1)   
-                
-        self.input_line_azimuth_srcfld_QComboBox = QComboBox()
-        line_QGridLayout.addWidget(self.input_line_azimuth_srcfld_QComboBox, 0,1,1,1)    
-        
-        self.input_line_orient_dip_type_QComboBox = QComboBox()
-
-        line_QGridLayout.addWidget(self.input_line_orient_dip_type_QComboBox, 1,0,1,1) 
-        
-        self.input_line_dip_srcfld_QComboBox = QComboBox()
-        line_QGridLayout.addWidget(self.input_line_dip_srcfld_QComboBox, 1,1,1,1)         
- 
-        line_QGroupBox.setLayout(line_QGridLayout)              
-        layout.addWidget(line_QGroupBox, 3,0,2,2)
-         
- 
-        self.structural_comboxes = [self.input_plane_azimuth_srcfld_QComboBox,
-                                    self.input_plane_dip_srcfld_QComboBox,
-                                    self.input_line_azimuth_srcfld_QComboBox,
-                                    self.input_line_dip_srcfld_QComboBox ]                
-                
-        self.refresh_struct_point_lyr_combobox()
-        
-        self.input_layers_QComboBox.currentIndexChanged[int].connect (self.refresh_structural_fields_comboboxes )
+        self.input_layers_QComboBox.currentIndexChanged[int].connect (self.refresh_link_field_combobox )
         
         okButton = QPushButton("&OK")
         cancelButton = QPushButton("Cancel")
@@ -241,7 +187,7 @@ class SourceDataDialog( QDialog ):
 
 
 
-    def refresh_struct_point_lyr_combobox(self):
+    def refresh_input_layer_combobox(self):
 
         self.pointLayers = loaded_point_layers()
         self.input_layers_QComboBox.clear()        
@@ -249,19 +195,19 @@ class SourceDataDialog( QDialog ):
         self.input_layers_QComboBox.addItem( self.layer_choose_msg )
         self.input_layers_QComboBox.addItems( [ layer.name() for layer in self.pointLayers ] ) 
         
-        self.reset_structural_field_comboboxes()
+        self.reset_link_field_combobox()
          
          
-    def reset_structural_field_comboboxes(self):        
+    def reset_link_field_combobox(self):        
         
-        for structural_combox in self.structural_comboxes:
-            structural_combox.clear()
-            structural_combox.addItem(self.field_undefined_txt)
+
+        self.link_field_QComboBox.clear()
+        self.link_field_QComboBox.addItem(self.field_undefined_txt)
             
                      
-    def refresh_structural_fields_comboboxes( self ):
+    def refresh_link_field_combobox( self ):
         
-        self.reset_structural_field_comboboxes()
+        self.reset_link_field_combobox()
 
         point_shape_qgis_ndx = self.input_layers_QComboBox.currentIndex() - 1
         if point_shape_qgis_ndx == -1:
@@ -273,8 +219,7 @@ class SourceDataDialog( QDialog ):
                
         field_names = [field.name() for field in point_layer_field_list]
         
-        for structural_combox in self.structural_comboxes:
-            structural_combox.addItems(field_names)
+        self.link_field_QComboBox.addItems(field_names)
 
     
     

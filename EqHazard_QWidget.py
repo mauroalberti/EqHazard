@@ -13,6 +13,14 @@ from geosurf.qgs_tools import loaded_point_layers, get_point_data
        
 class EqHazard_QWidget( QWidget ):
     
+    layer_info_types = [("thk (km)", "float"), 
+                        ("rho", "float"), 
+                        ("Vp (km/s)", "float"), 
+                        ("Vs (km/s)", "float"), 
+                        ("Qp", "float"), 
+                        ("Qs", "float"), 
+                        ("depth (km)", "float"), 
+                        ("layer", "int")]
     
     
     def __init__( self, canvas, plugin_name ):
@@ -67,29 +75,29 @@ class EqHazard_QWidget( QWidget ):
 
     def get_input_data( self ):
         
+        if len(loaded_point_layers()) == 0:
+            self.warn("No point layer loaded")
+            return
         
         dialog = SourceDataDialog()
 
         if dialog.exec_():
             try:
-                input_data = self.extract_input_data( dialog )
+                self.point_layer, self.link_name_field = self.extract_input_data( dialog )
             except:
                 self.warn( "Error in input")
                 return 
         else:
             self.warn( "Nothing defined")
             return
-
-
+        
+        
     def extract_input_data(self, dialog ):
         
-        point_layer = dialog.point_layer
-        
+        point_layer = dialog.point_layer        
         field_undefined_txt = dialog.field_undefined_txt
-
         link_name_field = self.parse_field_choice(dialog.link_field_QComboBox.currentText(), field_undefined_txt)
-            
-
+          
         return point_layer, link_name_field 
     
 
@@ -99,16 +107,68 @@ class EqHazard_QWidget( QWidget ):
             return None
         else:
             return val
-
-
-    def process_geodata(self):
-        
-        pass
          
 
-    def plot_geodata(self, input_data_types, structural_data):
-        pass    
+    def plot_geodata(self):
         
+        try:
+            point_layer, link_name_field = self.point_layer, self.link_name_field
+        except:
+            self.warn("Input data are not defined")
+            return
+        
+        _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
+        ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
+        
+        for ifile_path in ifile_paths:
+            print "\n\n"+ifile_path+"\n\n"
+            data_dict = self.read_hazard_input_file(ifile_path)
+            print data_dict
+            
+
+    def read_hazard_input_file(self, file_path):
+        
+        def parse_hazard_input_data(in_data_list2):
+            
+            data_dict = {} # a dict that will contain the lists of values for each field
+            
+            for fld_name in fld_names:
+                data_dict[fld_name] = []
+            
+            for rec_vals in in_data_list2:
+                assert len(fld_names) == len(rec_vals)
+                for fld_name, val in zip(fld_names, rec_vals):
+                    data_dict[fld_name].append(val)
+                    
+            return data_dict
+
+        
+        with open(file_path, "r") as ifile:
+            in_data = ifile.readlines()
+          
+        ifile_skip_lines = 3  
+        in_data_vals = in_data[ifile_skip_lines:]
+        
+        fld_names = [rec[0] for rec in EqHazard_QWidget.layer_info_types]
+        flds_num = len(fld_names)
+        in_data_list2 = []        
+        for n, in_data_val in enumerate(in_data_vals):
+            rec_vals = in_data_val.split()
+            if len(rec_vals) != flds_num:
+                self.warn("Rec # %d in file %s has only %d values instead of %d required" % \
+                          (ifile_skip_lines + n + 1,
+                          file_path,
+                          len(rec_vals),
+                          flds_num))
+                return None
+            in_data_list2.append(rec_vals)
+            
+        if len(in_data_list2) == 0:
+                self.warn("No recs found in file %s" % (file_path))
+                return None            
+        else:
+            return parse_hazard_input_data(in_data_list2)
+                
         
     def info(self, msg):
         
@@ -164,7 +224,7 @@ class SourceDataDialog( QDialog ):
                 
         self.refresh_input_layer_combobox()
         
-        self.input_layers_QComboBox.currentIndexChanged[int].connect (self.refresh_link_field_combobox )
+        self.input_layers_QComboBox.currentIndexChanged[int].connect(self.refresh_link_field_combobox )
         
         okButton = QPushButton("&OK")
         cancelButton = QPushButton("Cancel")

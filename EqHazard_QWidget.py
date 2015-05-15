@@ -123,7 +123,8 @@ class EqHazard_QWidget( QWidget ):
         for ifile_path in ifile_paths:
             print "\n\n"+ifile_path+"\n\n"
             data_dict = self.read_hazard_input_file(ifile_path)
-            print data_dict
+            for key in data_dict:
+                print data_dict[key]
             
 
     def read_hazard_input_file(self, file_path):

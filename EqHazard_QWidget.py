@@ -9,6 +9,8 @@ from PyQt4.QtGui import *
 from qgis.core import QgsMapLayerRegistry
 from geosurf.qgs_tools import loaded_point_layers, get_point_data
 
+from mpl.mpl_widget import MplMainWidget, plot_line
+
 
        
 class EqHazard_QWidget( QWidget ):
@@ -27,7 +29,10 @@ class EqHazard_QWidget( QWidget ):
 
         super( EqHazard_QWidget, self ).__init__() 
         self.mapcanvas = canvas        
-        self.plugin_name = plugin_name           
+        self.plugin_name = plugin_name    
+        
+        self.plot_windows = []
+               
         self.setup_gui()
 
                       
@@ -120,13 +125,29 @@ class EqHazard_QWidget( QWidget ):
         _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
         
-        for ifile_path in ifile_paths:
-            print "\n\n"+ifile_path+"\n\n"
-            data_dict = self.read_hazard_input_file(ifile_path)
-            for key in data_dict:
-                print data_dict[key]
-            
+        geodata = [self.read_hazard_input_file(ifile_path) for ifile_path in ifile_paths]
 
+        # create plot window
+        plot_window = MplMainWidget()  
+        
+        for n, geodata_unit in enumerate(geodata): 
+            subplot_code = self.get_subplot_code(len(geodata), n+1) 
+            self.plot_geodata_unit(plot_window, geodata_unit, subplot_code)
+            
+        plot_window.canvas.draw() 
+        
+        self.plot_windows.append( plot_window )
+
+
+    def get_subplot_code(self, n_recs, n_rec):
+
+        n_rows = (n_recs + 1) / 2
+        n_cols = 2
+        
+        subplot_code = int("%d%d%d" % (n_rows, n_cols, n_rec))
+        return subplot_code
+        
+        
     def read_hazard_input_file(self, file_path):
         
         def parse_hazard_input_data(in_data_list2):
@@ -139,7 +160,7 @@ class EqHazard_QWidget( QWidget ):
             for rec_vals in in_data_list2:
                 assert len(fld_names) == len(rec_vals)
                 for fld_name, val in zip(fld_names, rec_vals):
-                    data_dict[fld_name].append(val)
+                    data_dict[fld_name].append(float(val))
                     
             return data_dict
 
@@ -169,6 +190,39 @@ class EqHazard_QWidget( QWidget ):
                 return None            
         else:
             return parse_hazard_input_data(in_data_list2)
+                
+
+    def create_axes(self, subplot_code, plot_window, plot_x_range, plot_y_range ):
+
+            x_min, x_max = plot_x_range
+            print x_min, x_max
+            y_min, y_max = plot_y_range
+            print y_min, y_max
+            axes = plot_window.canvas.fig.add_subplot( subplot_code )
+            axes.set_xlim( x_min, x_max )
+            axes.set_ylim( y_min, y_max )
+
+            axes.grid(True)
+                       
+            return axes
+        
+        
+    def plot_geodata_unit(self, plot_window, geodata_unit, subplot_code):
+        
+        plot_x_range = self.get_data_range(geodata_unit["depth (km)"])
+        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
+        axes = self.create_axes( subplot_code,
+                                  plot_window, 
+                                  plot_x_range, 
+                                  plot_v_range  )        
+
+        return axes
+       
+        
+    def get_data_range(self, data_list):
+        
+        return 0, (max(data_list)/10 + 1)*10
+        
                 
         
     def info(self, msg):

@@ -104,6 +104,8 @@ def plot_line( axes, x_list, y_list, linecolor, name="", linewidth=1 ):
                                     ec="none",
                                     patchB=line,
                                     connectionstyle="angle3,angleA=0,angleB=-90") )
+        
+    return line
 
             
 def plot_filled_line( axes, x_list, y_list, plot_y_min, facecolor, alpha = 0.1 ):

@@ -2,6 +2,7 @@
 
 
 import os
+from math import ceil
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -126,17 +127,23 @@ class EqHazard_QWidget( QWidget ):
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
         
         geodata = [self.read_hazard_input_file(ifile_path) for ifile_path in ifile_paths]
-
+        geodata_names = self.extract_data_names(ifile_paths)
         # create plot window
         plot_window = MplMainWidget()  
         
-        for n, geodata_unit in enumerate(geodata): 
+        for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
             subplot_code = self.get_subplot_code(len(geodata), n+1) 
-            self.plot_geodata_unit(plot_window, geodata_unit, subplot_code)
+            self.plot_geodata_unit(plot_window, geodata_unit, geodata_name, subplot_code)
+            
             
         plot_window.canvas.draw() 
         
         self.plot_windows.append( plot_window )
+
+
+    def extract_data_names(self, ifile_paths):
+        
+        return [ifile_path.split(os.sep)[-1].split(".")[0] for ifile_path in ifile_paths]
 
 
     def get_subplot_code(self, n_recs, n_rec):
@@ -192,36 +199,59 @@ class EqHazard_QWidget( QWidget ):
             return parse_hazard_input_data(in_data_list2)
                 
 
-    def create_axes(self, subplot_code, plot_window, plot_x_range, plot_y_range ):
+    def create_axes(self, subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range ):
 
             x_min, x_max = plot_x_range
-            print x_min, x_max
             y_min, y_max = plot_y_range
-            print y_min, y_max
             axes = plot_window.canvas.fig.add_subplot( subplot_code )
             axes.set_xlim( x_min, x_max )
             axes.set_ylim( y_min, y_max )
+            axes.set_title(geodata_name)
 
             axes.grid(True)
                        
             return axes
         
         
-    def plot_geodata_unit(self, plot_window, geodata_unit, subplot_code):
+    def plot_geodata_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
         
-        plot_x_range = self.get_data_range(geodata_unit["depth (km)"])
+        plot_y_range = self.get_data_range(geodata_unit["depth (km)"])
         plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
         axes = self.create_axes( subplot_code,
                                   plot_window, 
-                                  plot_x_range, 
-                                  plot_v_range  )        
+                                  geodata_name,
+                                  plot_v_range, 
+                                  plot_y_range  ) 
+        
+        axes.invert_yaxis()
+        
+        axes.set_xlabel('v [km/s]')
+        axes.set_ylabel('depth [km]')
+
+        plot_window.canvas.fig.tight_layout()
+
+        
+        y_list = geodata_unit["depth (km)"]
+        
+        vp_line = plot_line( axes,
+                            geodata_unit["Vp (km/s)"], 
+                            y_list, 
+                            "red" )         
+ 
+        vs_line = plot_line( axes,
+                            geodata_unit["Vs (km/s)"], 
+                            y_list, 
+                            "blue" ) 
+        
+        plot_window.canvas.fig.legend([vp_line, vs_line], ['red', 'blue'])
+                      
 
         return axes
        
         
     def get_data_range(self, data_list):
         
-        return 0, (max(data_list)/10 + 1)*10
+        return 0, ceil(max(data_list))
         
                 
         

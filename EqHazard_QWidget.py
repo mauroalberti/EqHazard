@@ -206,7 +206,7 @@ class EqHazard_QWidget( QWidget ):
             axes = plot_window.canvas.fig.add_subplot( subplot_code )
             axes.set_xlim( x_min, x_max )
             axes.set_ylim( y_min, y_max )
-            axes.set_title(geodata_name)
+            axes.set_title(geodata_name,  y=1.25)
 
             axes.grid(True)
                        
@@ -215,39 +215,53 @@ class EqHazard_QWidget( QWidget ):
         
     def plot_geodata_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
         
-        plot_y_range = self.get_data_range(geodata_unit["depth (km)"])
-        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
-        axes = self.create_axes( subplot_code,
+        plot_depth_range = self.get_data_range(geodata_unit["depth (km)"])
+        
+        plot_dens_range = self.get_data_range(geodata_unit["rho"])        
+        
+        dens_axes = self.create_axes( subplot_code,
                                   plot_window, 
                                   geodata_name,
-                                  plot_v_range, 
-                                  plot_y_range  ) 
+                                  plot_dens_range, 
+                                  plot_depth_range  ) 
         
-        axes.invert_yaxis()
+        dens_axes.invert_yaxis()       
+        dens_axes.set_xlabel('density [g/cm3]')
+        dens_axes.set_ylabel('depth [km]') 
         
-        axes.set_xlabel('v [km/s]')
-        axes.set_ylabel('depth [km]')
-
         plot_window.canvas.fig.tight_layout()
-
         
         y_list = geodata_unit["depth (km)"]
         
-        vp_line = plot_line( axes,
+        dens_line = plot_line( dens_axes,
+                            geodata_unit["rho"], 
+                            y_list, 
+                            "brown",
+                            drawstyle = "steps-pre")    
+        
+
+        v_axes = dens_axes.twiny()
+
+        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
+        v_axes.set_xlim(plot_v_range)
+       
+        v_axes.set_xlabel('v [km/s]')
+   
+        vp_line = plot_line( v_axes,
                             geodata_unit["Vp (km/s)"], 
                             y_list, 
-                            "red" )         
+                            "red",
+                            drawstyle = "steps-pre")     
  
-        vs_line = plot_line( axes,
+        vs_line = plot_line( v_axes,
                             geodata_unit["Vs (km/s)"], 
                             y_list, 
-                            "blue" ) 
-        
-        plot_window.canvas.fig.legend([vp_line, vs_line], ['red', 'blue'])
-                      
+                            "blue",
+                            drawstyle = "steps-pre")  
 
-        return axes
-       
+             
+        plot_window.canvas.fig.legend([dens_line, vp_line, vs_line], ['density', 'Vp', 'Vs'])
+                      
         
     def get_data_range(self, data_list):
         

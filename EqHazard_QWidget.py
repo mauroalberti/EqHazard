@@ -8,8 +8,9 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 from qgis.core import QgsMapLayerRegistry
-from geosurf.qgs_tools import loaded_point_layers, get_point_data
 
+from geosurf.qgs_tools import loaded_point_layers, get_point_data
+from geosurf.utils import is_number
 from mpl.mpl_widget import MplMainWidget, plot_line
 
 
@@ -126,7 +127,16 @@ class EqHazard_QWidget( QWidget ):
         _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
         
-        geodata = [self.read_hazard_input_file(ifile_path) for ifile_path in ifile_paths]
+        geodata = []
+        for ifile_path in ifile_paths:
+            geodata_rec = self.read_hazard_input_file(ifile_path)
+            if geodata_rec is None:
+                return
+            else:
+                geodata.append(geodata_rec)
+                
+        assert len(geodata) > 0
+        
         geodata_names = self.extract_data_names(ifile_paths)
         # create plot window
         plot_window = MplMainWidget()  
@@ -171,12 +181,24 @@ class EqHazard_QWidget( QWidget ):
                     
             return data_dict
 
+
+        def extract_number_values(indata_raw):
+            
+            for n, indata_row in enumerate(indata_raw):
+                indata_vals = indata_row.split()
+                are_numbers = map(is_number, indata_vals)
+                if reduce(lambda a, b: a and b, are_numbers):
+                    return n, indata_raw[n:]
+            
+        try:
+            with open(file_path, "r") as ifile:
+                indata_raw = ifile.readlines()
+        except:
+            self.warn("Unable to read input file: %s" % (file_path))
+            return None
         
-        with open(file_path, "r") as ifile:
-            in_data = ifile.readlines()
-          
-        ifile_skip_lines = 3  
-        in_data_vals = in_data[ifile_skip_lines:]
+
+        ifile_skip_lines, in_data_vals = extract_number_values(indata_raw)
         
         fld_names = [rec[0] for rec in EqHazard_QWidget.layer_info_types]
         flds_num = len(fld_names)
@@ -206,7 +228,7 @@ class EqHazard_QWidget( QWidget ):
             axes = plot_window.canvas.fig.add_subplot( subplot_code )
             axes.set_xlim( x_min, x_max )
             axes.set_ylim( y_min, y_max )
-            axes.set_title(geodata_name,  y=1.25)
+            axes.set_title(geodata_name,  y=1.40)
 
             axes.grid(True)
                        
@@ -229,7 +251,7 @@ class EqHazard_QWidget( QWidget ):
         dens_axes.set_xlabel('density [g/cm3]')
         dens_axes.set_ylabel('depth [km]') 
         
-        plot_window.canvas.fig.tight_layout()
+        plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
         y_list = geodata_unit["depth (km)"]
         

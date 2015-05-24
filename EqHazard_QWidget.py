@@ -254,7 +254,7 @@ class EqHazard_QWidget( QWidget ):
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
         y_list = geodata_unit["depth (km)"]
-        
+                
         dens_line = plot_line( dens_axes,
                             geodata_unit["rho"], 
                             y_list, 
@@ -274,7 +274,7 @@ class EqHazard_QWidget( QWidget ):
                             y_list, 
                             "red",
                             drawstyle = "steps-pre")     
- 
+            
         vs_line = plot_line( v_axes,
                             geodata_unit["Vs (km/s)"], 
                             y_list, 

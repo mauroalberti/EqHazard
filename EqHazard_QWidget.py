@@ -303,41 +303,41 @@ class EqHazard_QWidget( QWidget ):
         
         plot_dens_range = self.get_data_range(geodata_unit["rho"])        
         
-        dens_axes = self.create_axes( subplot_code,
+        btm_axes = self.create_axes( subplot_code,
                                   plot_window, 
                                   geodata_name,
                                   plot_dens_range, 
                                   plot_depth_range  ) 
         
-        dens_axes.invert_yaxis()       
-        dens_axes.set_xlabel('density [g/cm3]')
-        dens_axes.set_ylabel('depth [km]') 
+        btm_axes.invert_yaxis()       
+        btm_axes.set_xlabel('density [g/cm3]')
+        btm_axes.set_ylabel('depth [km]') 
         
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
         y_list = geodata_unit["depth (km)"]
                 
-        dens_line = plot_line( dens_axes,
+        dens_line = plot_line( btm_axes,
                             geodata_unit["rho"], 
                             y_list, 
                             "brown",
                             drawstyle = "steps-pre")    
         
 
-        v_axes = dens_axes.twiny()
+        top_axes = btm_axes.twiny()
 
         plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
-        v_axes.set_xlim(plot_v_range)
+        top_axes.set_xlim(plot_v_range)
        
-        v_axes.set_xlabel('v [km/s]')
+        top_axes.set_xlabel('v [km/s]')
    
-        vp_line = plot_line( v_axes,
+        vp_line = plot_line( top_axes,
                             geodata_unit["Vp (km/s)"], 
                             y_list, 
                             "red",
                             drawstyle = "steps-pre")     
             
-        vs_line = plot_line( v_axes,
+        vs_line = plot_line( top_axes,
                             geodata_unit["Vs (km/s)"], 
                             y_list, 
                             "blue",

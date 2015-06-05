@@ -25,13 +25,25 @@ class EqHazard_QWidget( QWidget ):
                         ("Qs", "float"), 
                         ("depth (km)", "float"), 
                         ("layer", "int")]
-    
+        
     
     def __init__( self, canvas, plugin_name ):
 
         super( EqHazard_QWidget, self ).__init__() 
         self.mapcanvas = canvas        
-        self.plugin_name = plugin_name    
+        self.plugin_name = plugin_name 
+        
+        self.plot_undefined_choice_txt = "not defined"
+        self.plot_density_choice_txt = "density"
+        self.plot_velocities_choice_txt = "velocities"
+        self.plot_Qvalues_choice_txt = "Q values"
+                
+        self.config_plot_options = [self.plot_undefined_choice_txt,
+                                   self.plot_density_choice_txt,
+                                   self.plot_velocities_choice_txt,
+                                   self.plot_Qvalues_choice_txt]
+        
+        self.plot_configs_ok = False
         
         self.plot_windows = []
                
@@ -71,10 +83,14 @@ class EqHazard_QWidget( QWidget ):
         
         layout = QGridLayout()
 
+        self.configure_plot_QPushButton = QPushButton(self.tr("Configure plot"))          
+        self.configure_plot_QPushButton.clicked.connect( self.get_plot_configuration )         
+        layout.addWidget(self.configure_plot_QPushButton, 0, 0, 1, 1 )        
+ 
         self.plot_data_QPushButton = QPushButton(self.tr("Plot data"))          
         self.plot_data_QPushButton.clicked.connect( self.plot_geodata )         
-        layout.addWidget(self.plot_data_QPushButton, 0, 0, 1, 1 )        
-                
+        layout.addWidget(self.plot_data_QPushButton, 0, 1, 1, 1 ) 
+                       
         processing_QGroupBox.setLayout(layout)
         
         return processing_QGroupBox
@@ -98,7 +114,46 @@ class EqHazard_QWidget( QWidget ):
             self.warn( "Nothing defined")
             return
         
+       
+    def get_plot_configuration(self):
         
+        dialog = PlotConfigDialog( self.config_plot_options )
+        
+        if dialog.exec_():
+            try:
+                self.bottom_variables, self.top_variables = self.extract_plot_config(dialog)
+            except:
+                self.warn("Error in plot configuration")
+                return
+        else:
+            self.warn("Undefined plot configuration")
+            return
+        
+        if self.bottom_variables == self.plot_undefined_choice_txt and \
+           self.top_variables == self.plot_undefined_choice_txt:
+                self.warn("No choice for plot configuration")
+                self.plot_configs_ok = False
+        else:
+            self.plot_configs_ok = True
+            
+        """
+        self.plot_undefined_choice_txt = "not defined"
+        self.plot_density_choice_txt = "density"
+        self.plot_velocities_choice_txt = "velocities"
+        self.plot_Qvalues_choice_txt = "Q values"
+        """
+           
+        
+        
+
+    def extract_plot_config(self, dialog):
+        
+        bottom_variables = dialog.bottom_variables_QComboBox.currentText()
+        top_variables = dialog.top_variables_QComboBox.currentText()       
+        
+        return bottom_variables, top_variables
+        
+         
     def extract_input_data(self, dialog ):
         
         point_layer = dialog.point_layer        
@@ -114,7 +169,7 @@ class EqHazard_QWidget( QWidget ):
             return None
         else:
             return val
-         
+    
 
     def plot_geodata(self):
         
@@ -123,6 +178,13 @@ class EqHazard_QWidget( QWidget ):
         except:
             self.warn("Input data are not defined")
             return
+        
+        if not self.plot_configs_ok:
+            self.warn("Undefined plot configurations")
+            return
+        else:
+            bottom_variables, top_variables = self.bottom_variables, self.top_variables
+        
         
         _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
@@ -364,7 +426,7 @@ class SourceDataDialog( QDialog ):
         self.connect(cancelButton, SIGNAL("clicked()"),
                      self, SLOT("reject()"))
         
-        self.setWindowTitle("Define point structural layer")
+        self.setWindowTitle("Source layer")
 
 
 
@@ -403,7 +465,72 @@ class SourceDataDialog( QDialog ):
         self.link_field_QComboBox.addItems(field_names)
 
     
+
+class PlotConfigDialog( QDialog ):
     
+        
+            
+    def __init__(self, config_plot_options, parent=None):
+                
+        super( PlotConfigDialog, self ).__init__(parent)
+        
+        self.config_plot_options = config_plot_options
+        
+        self.setup_gui()
+        
+        
+    def setup_gui(self):        
+        
+ 
+        layout = QGridLayout()
+                        
+        # plot variables
+        
+        variables_QGroupBox = QGroupBox("Variables to plot")
+        variables_QGridLayout = QGridLayout() 
+
+        variables_QGridLayout.addWidget(QLabel("Bottom variable(s)"), 0,0,1,1)         
+        self.bottom_variables_QComboBox = QComboBox()
+        variables_QGridLayout.addWidget(self.bottom_variables_QComboBox, 0,1,1,1) 
+  
+        variables_QGridLayout.addWidget(QLabel("Top variable(s)"), 1,0,1,1)         
+        self.top_variables_QComboBox = QComboBox()
+        variables_QGridLayout.addWidget(self.top_variables_QComboBox, 1,1,1,1) 
+              
+        variables_QGroupBox.setLayout(variables_QGridLayout)              
+        layout.addWidget(variables_QGroupBox, 0,0,1,2)          
+   
+        self.populate_config_plot_combobox()
+        
+        okButton = QPushButton("&OK")
+        cancelButton = QPushButton("Cancel")
+
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addStretch()
+        buttonLayout.addWidget(okButton)
+        buttonLayout.addWidget(cancelButton)
+              
+        layout.addLayout( buttonLayout, 5, 0, 1, 2 )
+        
+        self.setLayout( layout )
+
+        self.connect(okButton, SIGNAL("clicked()"),
+                     self,  SLOT("accept()") )
+        self.connect(cancelButton, SIGNAL("clicked()"),
+                     self, SLOT("reject()"))
+        
+        self.setWindowTitle("Plot variables")
+
+
+
+    def populate_config_plot_combobox(self):
+        
+
+        self.bottom_variables_QComboBox.insertItems(0, self.config_plot_options)
+        self.top_variables_QComboBox.insertItems(0, self.config_plot_options) 
+              
+
+
         
 
 

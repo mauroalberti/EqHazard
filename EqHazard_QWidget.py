@@ -285,16 +285,102 @@ class EqHazard_QWidget( QWidget ):
 
     def create_axes(self, subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range ):
 
+        axes = plot_window.canvas.fig.add_subplot( subplot_code )
+        
+        y_min, y_max = plot_y_range
+        axes.set_ylim( y_min, y_max )        
+        if plot_x_range is not None:
             x_min, x_max = plot_x_range
-            y_min, y_max = plot_y_range
-            axes = plot_window.canvas.fig.add_subplot( subplot_code )
             axes.set_xlim( x_min, x_max )
-            axes.set_ylim( y_min, y_max )
-            axes.set_title(geodata_name,  y=1.40)
 
-            axes.grid(True)
-                       
-            return axes
+        axes.set_title(geodata_name,  y=1.40)
+        axes.grid(True)
+                           
+        return axes
+
+
+    def plot_data_unit(self, plot_window, variable_y, variables_x_btm, variables_x_top, geodata_name, subplot_code):
+        
+        depth_label = "depth [km]"
+        density_label = "density [g/cm3]"
+        velocity_label = "v [km/s]"
+        Q_vals_label = "Q value"
+                
+        if variables_x_btm is not None:
+            var_x_btm_type, var_x_btm_vals = variables_x_btm
+            if var_x_btm_type == self.plot_density_choice_txt:
+                var_x_btm_label = density_label
+            elif var_x_btm_type == self.plot_velocities_choice_txt:
+                var_x_btm_label = velocity_label
+            elif var_x_btm_type == self.plot_Qvalues_choice_txt:
+                var_x_btm_label = Q_vals_label
+            else:
+                self.warn("Debug: error in x type")
+                return   
+        else:
+            var_x_btm_type, var_x_btm_vals = None, None
+            var_x_btm_label = ""
+           
+        if var_x_btm_vals is None:
+            plot_x_range = None
+        elif len(var_x_btm_vals) == 1:
+            plot_x_range = self.get_data_range(var_x_btm_vals[0])
+        elif len(var_x_btm_vals) == 2:
+            plot_x_range = self.get_data_range(var_x_btm_vals[0]+var_x_btm_vals[1])
+        else:
+            self.warn("Debug: error in x plot range")
+            return        
+
+        plot_y_range = self.get_data_range(variable_y) 
+            
+        btm_axes = self.create_axes( subplot_code,
+                                  plot_window, 
+                                  geodata_name,
+                                  plot_x_range, 
+                                  plot_y_range  )             
+              
+        btm_axes.set_xlabel(var_x_btm_label)
+        btm_axes.set_ylabel(depth_label) 
+
+        btm_axes.invert_yaxis()         
+        plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
+                
+                
+        """
+
+        y_list = geodata_unit["depth (km)"]
+                
+        dens_line = plot_line( btm_axes,
+                            geodata_unit["rho"], 
+                            y_list, 
+                            "brown",
+                            drawstyle = "steps-pre")    
+        
+
+        top_axes = btm_axes.twiny()
+
+        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
+        top_axes.set_xlim(plot_v_range)
+       
+        top_axes.set_xlabel('v [km/s]')
+   
+        vp_line = plot_line( top_axes,
+                            geodata_unit["Vp (km/s)"], 
+                            y_list, 
+                            "red",
+                            drawstyle = "steps-pre")     
+            
+        vs_line = plot_line( top_axes,
+                            geodata_unit["Vs (km/s)"], 
+                            y_list, 
+                            "blue",
+                            drawstyle = "steps-pre")  
+
+             
+        plot_window.canvas.fig.legend([dens_line, vp_line, vs_line], ['density', 'Vp', 'Vs'])
+                      
+        """
+        
         
         
     def plot_geodata_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
@@ -349,8 +435,12 @@ class EqHazard_QWidget( QWidget ):
         
     def get_data_range(self, data_list):
         
-        return 0, ceil(max(data_list))
-        
+        if data_list is None:
+            return None
+        elif data_list == []:
+            return None
+        else:
+            return 0, ceil(max(data_list))
                 
         
     def info(self, msg):

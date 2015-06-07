@@ -381,7 +381,8 @@ class EqHazard_QWidget( QWidget ):
         var_x_top_label = self.variable_label( variables_x_top)
         
         plot_x_btm_range = self.extract_values_range(variables_x_btm, geodata_unit)          
-
+        plot_x_top_range = self.extract_values_range(variables_x_top, geodata_unit)
+        
         plot_y_range = self.get_data_range(geodata_unit[self.depth_field_name]) 
             
         btm_axes = self.create_axes( subplot_code,
@@ -396,19 +397,18 @@ class EqHazard_QWidget( QWidget ):
         btm_axes.invert_yaxis()         
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
-        colors_x_btm = ["red", "blue"]
+        colors_x_btm = ["brown", "green"]
         bottom_lines = self.create_plot_lines(btm_axes, geodata_unit, variables_x_btm, colors_x_btm)
-                
+
+ 
+        if plot_x_top_range is not None:
+            top_axes = btm_axes.twiny()
+            top_axes.set_xlim( *plot_x_top_range )
+            colors_x_top = ["red", "blue"]
+            top_lines = self.create_plot_lines(top_axes, geodata_unit, variables_x_top, colors_x_top)
+               
+                        
         """
-
-        dens_line = plot_line( btm_axes,
-                            geodata_unit["rho"], 
-                            y_vals, 
-                            "brown",
-                            drawstyle = "steps-pre")    
-        
-
-        top_axes = btm_axes.twiny()
 
         plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
         top_axes.set_xlim(plot_v_range)

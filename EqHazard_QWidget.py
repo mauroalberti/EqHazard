@@ -17,15 +17,7 @@ from mpl.mpl_widget import MplMainWidget, plot_line
        
 class EqHazard_QWidget( QWidget ):
     
-    layer_info_types = [("thk (km)", "float"), 
-                        ("rho", "float"), 
-                        ("Vp (km/s)", "float"), 
-                        ("Vs (km/s)", "float"), 
-                        ("Qp", "float"), 
-                        ("Qs", "float"), 
-                        ("depth (km)", "float"), 
-                        ("layer", "int")]
-        
+      
     
     def __init__( self, canvas, plugin_name ):
 
@@ -42,6 +34,26 @@ class EqHazard_QWidget( QWidget ):
                                    self.plot_density_choice_txt,
                                    self.plot_velocities_choice_txt,
                                    self.plot_Qvalues_choice_txt]
+        
+        self.thickness_field_name = "thk (km)"
+        self.density_field_name = "rho"
+        self.velocity_p_field_name = "Vp (km/s)"
+        self.velocity_s_field_name = "Vs (km/s)"
+        self.q_p_field_name = "Qp"                
+        self.q_s_field_name = "Qs"  
+        self.depth_field_name = "depth (km)"
+        self.layer_field_name = "layer"
+        
+        self.input_field_names = [self.thickness_field_name,
+                                  self.density_field_name,
+                                  self.velocity_p_field_name,
+                                  self.velocity_s_field_name,
+                                  self.q_p_field_name,
+                                  self.q_s_field_name,
+                                  self.depth_field_name,
+                                  self.layer_field_name]
+        
+        
         
         self.plot_configs_ok = False
         
@@ -142,9 +154,7 @@ class EqHazard_QWidget( QWidget ):
         self.plot_velocities_choice_txt = "velocities"
         self.plot_Qvalues_choice_txt = "Q values"
         """
-           
-        
-        
+            
 
     def extract_plot_config(self, dialog):
         
@@ -204,9 +214,14 @@ class EqHazard_QWidget( QWidget ):
         plot_window = MplMainWidget()  
         
         for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
-            subplot_code = self.get_subplot_code(len(geodata), n+1) 
-            self.plot_geodata_unit(plot_window, geodata_unit, geodata_name, subplot_code)
-            
+            subplot_code = self.get_subplot_code(len(geodata), n+1)
+             
+            self.plot_geodata_unit(plot_window, 
+                                   bottom_variables,
+                                   top_variables, 
+                                   geodata_unit,
+                                   geodata_name, 
+                                   subplot_code)
             
         plot_window.canvas.draw() 
         
@@ -262,7 +277,7 @@ class EqHazard_QWidget( QWidget ):
 
         ifile_skip_lines, in_data_vals = extract_number_values(indata_raw)
         
-        fld_names = [rec[0] for rec in EqHazard_QWidget.layer_info_types]
+        fld_names = self.input_field_names
         flds_num = len(fld_names)
         in_data_list2 = []        
         for n, in_data_val in enumerate(in_data_vals):
@@ -299,44 +314,63 @@ class EqHazard_QWidget( QWidget ):
         return axes
 
 
-    def plot_data_unit(self, plot_window, variable_y, variables_x_btm, variables_x_top, geodata_name, subplot_code):
+    def extract_values(self, geodata_unit, variables):
         
-        depth_label = "depth [km]"
+        if variables == self.plot_density_choice_txt:
+            return [geodata_unit[self.density_field_name]]
+        elif variables == self.plot_velocities_choice_txt:
+            return [geodata_unit[self.velocity_p_field_name], geodata_unit[self.velocity_s_field_name]]
+        elif variables == self.plot_Qvalues_choice_txt:
+            return [geodata_unit[self.q_p_field_name], geodata_unit[self.q_s_field_name]]  
+        else:
+            return []      
+
+
+
+    def variable_label(self, variable_x):
+
         density_label = "density [g/cm3]"
         velocity_label = "v [km/s]"
         Q_vals_label = "Q value"
                 
-        if variables_x_btm is not None:
-            var_x_btm_type, var_x_btm_vals = variables_x_btm
-            if var_x_btm_type == self.plot_density_choice_txt:
-                var_x_btm_label = density_label
-            elif var_x_btm_type == self.plot_velocities_choice_txt:
-                var_x_btm_label = velocity_label
-            elif var_x_btm_type == self.plot_Qvalues_choice_txt:
-                var_x_btm_label = Q_vals_label
-            else:
-                self.warn("Debug: error in x type")
-                return   
-        else:
-            var_x_btm_type, var_x_btm_vals = None, None
-            var_x_btm_label = ""
-           
-        if var_x_btm_vals is None:
-            plot_x_range = None
-        elif len(var_x_btm_vals) == 1:
-            plot_x_range = self.get_data_range(var_x_btm_vals[0])
-        elif len(var_x_btm_vals) == 2:
-            plot_x_range = self.get_data_range(var_x_btm_vals[0]+var_x_btm_vals[1])
-        else:
-            self.warn("Debug: error in x plot range")
-            return        
+        if variable_x == self.plot_density_choice_txt:
+            return density_label
+        elif variable_x == self.plot_velocities_choice_txt:
+            return velocity_label
+        elif variable_x == self.plot_Qvalues_choice_txt:
+            return Q_vals_label
+        elif variable_x == self.plot_undefined_choice_txt:        
+            return ""        
 
-        plot_y_range = self.get_data_range(variable_y) 
+
+    def extract_values_range(self, variable_x, geodata_unit):
+    
+            
+        if variable_x == self.plot_density_choice_txt:
+            return self.get_data_range( geodata_unit[self.density_field_name] )
+        elif variable_x == self.plot_velocities_choice_txt:
+            return self.get_data_range( geodata_unit[self.velocity_p_field_name] + geodata_unit[self.velocity_s_field_name])
+        elif variable_x == self.plot_Qvalues_choice_txt:
+            return self.get_data_range( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
+        elif variable_x == self.plot_undefined_choice_txt:        
+            return None    
+        
+
+    def plot_geodata_unit(self, plot_window, variables_x_btm, variables_x_top, geodata_unit, geodata_name, subplot_code):
+        
+        depth_label = "depth [km]"
+                
+        var_x_btm_label = self.variable_label( variables_x_btm)
+        var_x_top_label = self.variable_label( variables_x_top)
+        
+        plot_x_btm_range = self.extract_values_range(variables_x_btm, geodata_unit)          
+
+        plot_y_range = self.get_data_range(geodata_unit[self.depth_field_name]) 
             
         btm_axes = self.create_axes( subplot_code,
                                   plot_window, 
                                   geodata_name,
-                                  plot_x_range, 
+                                  plot_x_btm_range, 
                                   plot_y_range  )             
               
         btm_axes.set_xlabel(var_x_btm_label)
@@ -383,7 +417,7 @@ class EqHazard_QWidget( QWidget ):
         
         
         
-    def plot_geodata_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
+    def plot_data_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
         
         plot_depth_range = self.get_data_range(geodata_unit["depth (km)"])
         

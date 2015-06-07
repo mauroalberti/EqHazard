@@ -354,11 +354,28 @@ class EqHazard_QWidget( QWidget ):
             return self.get_data_range( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
         elif variable_x == self.plot_undefined_choice_txt:        
             return None    
+    
+    
+    def create_plot_lines(self, axes, geodata_unit, variables, colors):
+        
+        var_values = self.extract_values(geodata_unit, variables)
+        variable_y = geodata_unit[self.depth_field_name]   
+        lines = []
+        for variable_x, color in zip(var_values, colors):
+            lines.append( plot_line(axes,
+                         variable_x, 
+                         variable_y, 
+                         color,
+                         drawstyle = "steps-pre") )
+
+        return lines        
         
 
     def plot_geodata_unit(self, plot_window, variables_x_btm, variables_x_top, geodata_unit, geodata_name, subplot_code):
         
         depth_label = "depth [km]"
+        depth_vals = geodata_unit[self.depth_field_name]
+        
                 
         var_x_btm_label = self.variable_label( variables_x_btm)
         var_x_top_label = self.variable_label( variables_x_top)
@@ -378,15 +395,15 @@ class EqHazard_QWidget( QWidget ):
 
         btm_axes.invert_yaxis()         
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
-                
+        
+        colors_x_btm = ["red", "blue"]
+        bottom_lines = self.create_plot_lines(btm_axes, geodata_unit, variables_x_btm, colors_x_btm)
                 
         """
 
-        y_list = geodata_unit["depth (km)"]
-                
         dens_line = plot_line( btm_axes,
                             geodata_unit["rho"], 
-                            y_list, 
+                            y_vals, 
                             "brown",
                             drawstyle = "steps-pre")    
         
@@ -400,13 +417,13 @@ class EqHazard_QWidget( QWidget ):
    
         vp_line = plot_line( top_axes,
                             geodata_unit["Vp (km/s)"], 
-                            y_list, 
+                            y_vals, 
                             "red",
                             drawstyle = "steps-pre")     
             
         vs_line = plot_line( top_axes,
                             geodata_unit["Vs (km/s)"], 
-                            y_list, 
+                            y_vals, 
                             "blue",
                             drawstyle = "steps-pre")  
 
@@ -435,11 +452,11 @@ class EqHazard_QWidget( QWidget ):
         
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
-        y_list = geodata_unit["depth (km)"]
+        y_vals = geodata_unit["depth (km)"]
                 
         dens_line = plot_line( btm_axes,
                             geodata_unit["rho"], 
-                            y_list, 
+                            y_vals, 
                             "brown",
                             drawstyle = "steps-pre")    
         
@@ -453,13 +470,13 @@ class EqHazard_QWidget( QWidget ):
    
         vp_line = plot_line( top_axes,
                             geodata_unit["Vp (km/s)"], 
-                            y_list, 
+                            y_vals, 
                             "red",
                             drawstyle = "steps-pre")     
             
         vs_line = plot_line( top_axes,
                             geodata_unit["Vs (km/s)"], 
-                            y_list, 
+                            y_vals, 
                             "blue",
                             drawstyle = "steps-pre")  
 

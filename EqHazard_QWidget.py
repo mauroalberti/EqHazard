@@ -143,17 +143,13 @@ class EqHazard_QWidget( QWidget ):
         
         if self.bottom_variables == self.plot_undefined_choice_txt and \
            self.top_variables == self.plot_undefined_choice_txt:
-                self.warn("No choice for plot configuration")
-                self.plot_configs_ok = False
+            self.warn("No choice for plot configuration")
+            self.plot_configs_ok = False
+        elif self.bottom_variables == self.top_variables:
+            self.warn("Choose different variables")
+            self.plot_configs_ok = False            
         else:
             self.plot_configs_ok = True
-            
-        """
-        self.plot_undefined_choice_txt = "not defined"
-        self.plot_density_choice_txt = "density"
-        self.plot_velocities_choice_txt = "velocities"
-        self.plot_Qvalues_choice_txt = "Q values"
-        """
             
 
     def extract_plot_config(self, dialog):
@@ -323,9 +319,24 @@ class EqHazard_QWidget( QWidget ):
         elif variables == self.plot_Qvalues_choice_txt:
             return [geodata_unit[self.q_p_field_name], geodata_unit[self.q_s_field_name]]  
         else:
-            return []      
+            return []  
 
 
+    def variable_legend_label(self, variable_x):
+
+        density_legend = ["density"]
+        velocity_legend = ["Vp", "Vs"]
+        Q_vals_legend = ["Qp", "Qs"]
+                
+        if variable_x == self.plot_density_choice_txt:
+            return density_legend
+        elif variable_x == self.plot_velocities_choice_txt:
+            return velocity_legend
+        elif variable_x == self.plot_Qvalues_choice_txt:
+            return Q_vals_legend
+        elif variable_x == self.plot_undefined_choice_txt:        
+            return []  
+        
 
     def variable_label(self, variable_x):
 
@@ -344,8 +355,7 @@ class EqHazard_QWidget( QWidget ):
 
 
     def extract_values_range(self, variable_x, geodata_unit):
-    
-            
+                
         if variable_x == self.plot_density_choice_txt:
             return self.get_data_range( geodata_unit[self.density_field_name] )
         elif variable_x == self.plot_velocities_choice_txt:
@@ -353,7 +363,7 @@ class EqHazard_QWidget( QWidget ):
         elif variable_x == self.plot_Qvalues_choice_txt:
             return self.get_data_range( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
         elif variable_x == self.plot_undefined_choice_txt:        
-            return None    
+            return None
     
     
     def create_plot_lines(self, axes, geodata_unit, variables, colors):
@@ -376,7 +386,7 @@ class EqHazard_QWidget( QWidget ):
         depth_label = "depth [km]"
         depth_vals = geodata_unit[self.depth_field_name]
         
-                
+        
         var_x_btm_label = self.variable_label( variables_x_btm)
         var_x_top_label = self.variable_label( variables_x_top)
         
@@ -404,9 +414,19 @@ class EqHazard_QWidget( QWidget ):
         if plot_x_top_range is not None:
             top_axes = btm_axes.twiny()
             top_axes.set_xlim( *plot_x_top_range )
+            top_axes.set_xlabel(var_x_top_label)
             colors_x_top = ["red", "blue"]
             top_lines = self.create_plot_lines(top_axes, geodata_unit, variables_x_top, colors_x_top)
-               
+
+
+        var_x_btm_legend_label = self.variable_legend_label( variables_x_btm)
+        var_x_top_legend_label = self.variable_legend_label( variables_x_top) 
+ 
+        if plot_x_top_range is None:
+            plot_window.canvas.fig.legend(bottom_lines, var_x_btm_legend_label)
+        else:
+            plot_window.canvas.fig.legend(bottom_lines + top_lines, var_x_btm_legend_label + var_x_top_legend_label)            
+                      
                         
         """
 
@@ -426,10 +446,7 @@ class EqHazard_QWidget( QWidget ):
                             y_vals, 
                             "blue",
                             drawstyle = "steps-pre")  
-
-             
-        plot_window.canvas.fig.legend([dens_line, vp_line, vs_line], ['density', 'Vp', 'Vs'])
-                      
+       
         """
         
         
@@ -630,11 +647,11 @@ class PlotConfigDialog( QDialog ):
         variables_QGroupBox = QGroupBox("Variables to plot")
         variables_QGridLayout = QGridLayout() 
 
-        variables_QGridLayout.addWidget(QLabel("Bottom variable(s)"), 0,0,1,1)         
+        variables_QGridLayout.addWidget(QLabel("Variable(s)"), 0,0,1,1)         
         self.bottom_variables_QComboBox = QComboBox()
         variables_QGridLayout.addWidget(self.bottom_variables_QComboBox, 0,1,1,1) 
   
-        variables_QGridLayout.addWidget(QLabel("Top variable(s)"), 1,0,1,1)         
+        variables_QGridLayout.addWidget(QLabel("Additional variable(s)"), 1,0,1,1)         
         self.top_variables_QComboBox = QComboBox()
         variables_QGridLayout.addWidget(self.top_variables_QComboBox, 1,1,1,1) 
               
@@ -666,8 +683,7 @@ class PlotConfigDialog( QDialog ):
 
     def populate_config_plot_combobox(self):
         
-
-        self.bottom_variables_QComboBox.insertItems(0, self.config_plot_options)
+        self.bottom_variables_QComboBox.insertItems(0, self.config_plot_options[1:])
         self.top_variables_QComboBox.insertItems(0, self.config_plot_options) 
               
 

@@ -81,7 +81,7 @@ class EqHazard_QWidget( QWidget ):
         layout = QVBoxLayout() 
         
         self.read_input_data_QPushButton = QPushButton(self.tr("Read input file"))  
-        self.read_input_data_QPushButton.clicked.connect( self.get_input_data ) 
+        self.read_input_data_QPushButton.clicked.connect( self.get_input_data_def ) 
         layout.addWidget(self.read_input_data_QPushButton )
         
         input_QGroupBox.setLayout(layout)
@@ -95,30 +95,33 @@ class EqHazard_QWidget( QWidget ):
         
         layout = QGridLayout()
 
+        """
         self.configure_plot_QPushButton = QPushButton(self.tr("Configure plot"))          
         self.configure_plot_QPushButton.clicked.connect( self.get_plot_configuration )         
-        layout.addWidget(self.configure_plot_QPushButton, 0, 0, 1, 1 )        
+        layout.addWidget(self.configure_plot_QPushButton, 0, 0, 1, 1 )  
+        """      
  
         self.plot_data_QPushButton = QPushButton(self.tr("Plot data"))          
         self.plot_data_QPushButton.clicked.connect( self.plot_geodata )         
-        layout.addWidget(self.plot_data_QPushButton, 0, 1, 1, 1 ) 
+        layout.addWidget(self.plot_data_QPushButton, 0, 0, 1, 1 ) 
                        
         processing_QGroupBox.setLayout(layout)
         
         return processing_QGroupBox
     
 
-    def get_input_data( self ):
+    def get_input_data_def( self ):
         
         if len(loaded_point_layers()) == 0:
             self.warn("No point layer loaded")
             return
         
-        dialog = SourceDataDialog()
+        dialog = InputLayerDialog()
 
         if dialog.exec_():
             try:
-                self.point_layer, self.link_name_field = self.extract_input_data( dialog )
+                self.point_layer, self.link_name_field, self.input_data_type = self.extract_input_info_data( dialog )
+                assert self.input_data_type in ("layer info", "strong motion")
             except:
                 self.warn( "Error in input")
                 return 
@@ -126,7 +129,10 @@ class EqHazard_QWidget( QWidget ):
             self.warn( "Nothing defined")
             return
         
-       
+        if self.input_data_type == "layer info":
+            self.get_plot_configuration()
+            
+            
     def get_plot_configuration(self):
         
         dialog = PlotConfigDialog( self.config_plot_options )
@@ -160,13 +166,20 @@ class EqHazard_QWidget( QWidget ):
         return bottom_variables, top_variables
         
          
-    def extract_input_data(self, dialog ):
+    def extract_input_info_data(self, dialog ):
         
         point_layer = dialog.point_layer        
         field_undefined_txt = dialog.field_undefined_txt
         link_name_field = self.parse_field_choice(dialog.link_field_QComboBox.currentText(), field_undefined_txt)
+        
+        if dialog.choice_layerinfo_input_QRadioButton.isChecked():            
+            input_data_type = "layer info"
+        elif dialog.choice_strongmotion_input_QRadioButton.isChecked():
+            input_data_type = "strong motion"
+        else:
+            input_data_type = ""
           
-        return point_layer, link_name_field 
+        return point_layer, link_name_field, input_data_type
     
 
     def parse_field_choice(self, val, choose_message):
@@ -522,12 +535,12 @@ class EqHazard_QWidget( QWidget ):
         
         
         
-class SourceDataDialog( QDialog ):
+class InputLayerDialog( QDialog ):
     
     
     def __init__(self, parent=None):
                 
-        super( SourceDataDialog, self ).__init__(parent)
+        super( InputLayerDialog, self ).__init__(parent)
         
         self.setup_gui()
         
@@ -557,15 +570,25 @@ class SourceDataDialog( QDialog ):
 
         self.link_field_QComboBox = QComboBox()
 
-        linkfield_QGridLayout.addWidget(self.link_field_QComboBox, 0,0,1,1)   
+        linkfield_QGridLayout.addWidget(self.link_field_QComboBox, 0,0,1,2)   
+        
+        self.choice_layerinfo_input_QRadioButton = QRadioButton("Layer info")
+        self.choice_layerinfo_input_QRadioButton.setChecked(True)
+
+        linkfield_QGridLayout.addWidget(self.choice_layerinfo_input_QRadioButton, 1,0,1,1)   
+        
+        self.choice_strongmotion_input_QRadioButton = QRadioButton("Strong motion")
+        linkfield_QGridLayout.addWidget(self.choice_strongmotion_input_QRadioButton, 1,1,1,1)          
+        
 
         linkfield_QGroupBox.setLayout(linkfield_QGridLayout)              
-        layout.addWidget(linkfield_QGroupBox, 1,0,2,2)
-             
+        layout.addWidget(linkfield_QGroupBox, 1,0,2,2)             
                 
         self.refresh_input_layer_combobox()
         
         self.input_layers_QComboBox.currentIndexChanged[int].connect(self.refresh_link_field_combobox )
+        
+             
         
         okButton = QPushButton("&OK")
         cancelButton = QPushButton("Cancel")
@@ -622,7 +645,9 @@ class SourceDataDialog( QDialog ):
         
         self.link_field_QComboBox.addItems(field_names)
 
+   
     
+  
 
 class PlotConfigDialog( QDialog ):
     

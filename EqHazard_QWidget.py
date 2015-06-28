@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 
 import os
-from math import ceil
+from math import ceil, floor
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -24,6 +25,8 @@ class EqHazard_QWidget( QWidget ):
         super( EqHazard_QWidget, self ).__init__() 
         self.mapcanvas = canvas        
         self.plugin_name = plugin_name 
+        
+        self.input_field_undefined_txt = "---"
         
         self.plot_undefined_choice_txt = "not defined"
         self.plot_density_choice_txt = "density"
@@ -110,19 +113,35 @@ class EqHazard_QWidget( QWidget ):
     
 
     def get_input_data_def( self ):
+                 
+        def extract_input_info_data(dialog ):
+            
+            point_layer = dialog.point_layer        
+            link_name_field = dialog.link_field_QComboBox.currentText()
+                        
+            if dialog.choice_layerinfo_input_QRadioButton.isChecked():            
+                input_data_type = "layer info"
+            elif dialog.choice_strongmotion_input_QRadioButton.isChecked():
+                input_data_type = "strong motion"
+            else:
+                input_data_type = ""
+              
+            return point_layer, link_name_field, input_data_type    
+
         
         if len(loaded_point_layers()) == 0:
             self.warn("No point layer loaded")
             return
         
-        dialog = InputLayerDialog()
+        dialog = InputLayerDialog(self.input_field_undefined_txt)
 
         if dialog.exec_():
             try:
-                self.point_layer, self.link_name_field, self.input_data_type = self.extract_input_info_data( dialog )
+                self.point_layer, self.link_name_field, self.input_data_type = extract_input_info_data( dialog )
+                assert self.link_name_field != self.input_field_undefined_txt
                 assert self.input_data_type in ("layer info", "strong motion")
             except:
-                self.warn( "Error in input")
+                self.warn( "Input error")
                 return 
         else:
             self.warn( "Nothing defined")
@@ -132,13 +151,21 @@ class EqHazard_QWidget( QWidget ):
             self.get_plot_configuration()
             
             
-    def get_plot_configuration(self):
+    def get_plot_configuration(self):        
+        
+        def extract_plot_config(dialog):
+            
+            bottom_variables = dialog.bottom_variables_QComboBox.currentText()
+            top_variables = dialog.top_variables_QComboBox.currentText()       
+            
+            return bottom_variables, top_variables
+    
         
         dialog = PlotConfigDialog( self.config_plot_options )
         
         if dialog.exec_():
             try:
-                self.bottom_variables, self.top_variables = self.extract_plot_config(dialog)
+                self.bottom_variables, self.top_variables = extract_plot_config(dialog)
             except:
                 self.warn("Error in plot configuration")
                 return
@@ -155,101 +182,8 @@ class EqHazard_QWidget( QWidget ):
             self.plot_configs_ok = False            
         else:
             self.plot_configs_ok = True
-            
-
-    def extract_plot_config(self, dialog):
-        
-        bottom_variables = dialog.bottom_variables_QComboBox.currentText()
-        top_variables = dialog.top_variables_QComboBox.currentText()       
-        
-        return bottom_variables, top_variables
-        
-         
-    def extract_input_info_data(self, dialog ):
-        
-        point_layer = dialog.point_layer        
-        field_undefined_txt = dialog.field_undefined_txt
-        link_name_field = self.parse_field_choice(dialog.link_field_QComboBox.currentText(), field_undefined_txt)
-        
-        if dialog.choice_layerinfo_input_QRadioButton.isChecked():            
-            input_data_type = "layer info"
-        elif dialog.choice_strongmotion_input_QRadioButton.isChecked():
-            input_data_type = "strong motion"
-        else:
-            input_data_type = ""
-          
-        return point_layer, link_name_field, input_data_type
     
 
-    def parse_field_choice(self, val, choose_message):
-        
-        if val == choose_message:
-            return None
-        else:
-            return val
-    
-
-    def plot_geodata(self):
-        
-        try:
-            point_layer, link_name_field, input_data_type = self.point_layer, self.link_name_field, self.input_data_type
-        except:
-            self.warn("Input data are not defined")
-            return
-
-        _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
-        ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
-                
-        geodata = []
-        for ifile_path in ifile_paths:
-            geodata_rec = self.read_hazard_input_file(ifile_path)
-            if geodata_rec is None:
-                return
-            else:
-                geodata.append(geodata_rec)
-                
-        assert len(geodata) > 0
-        
-        geodata_names = self.extract_data_names(ifile_paths)        
-        
-        plot_window = MplMainWidget()  # create plot window
-
-        if not self.plot_configs_ok:
-            self.warn("Undefined plot configurations")
-            return
-        else:
-            bottom_variables, top_variables = self.bottom_variables, self.top_variables
-                   
-        # plot profiles
-        for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
-            subplot_code = self.get_subplot_code(len(geodata), n+1)
-             
-            self.plot_geodata_unit(plot_window, 
-                                   bottom_variables,
-                                   top_variables, 
-                                   geodata_unit,
-                                   geodata_name, 
-                                   subplot_code)
-            
-        plot_window.canvas.draw() 
-        
-        self.plot_windows.append( plot_window )
-
-
-    def extract_data_names(self, ifile_paths):
-        
-        return [ifile_path.split(os.sep)[-1].split(".")[0] for ifile_path in ifile_paths]
-
-
-    def get_subplot_code(self, n_recs, n_rec):
-
-        n_rows = (n_recs + 1) / 2
-        n_cols = 2
-        
-        subplot_code = int("%d%d%d" % (n_rows, n_cols, n_rec))
-        return subplot_code
-        
-        
     def read_hazard_input_file(self, file_path):
         
         def parse_hazard_input_data(in_data_list2):
@@ -312,114 +246,193 @@ class EqHazard_QWidget( QWidget ):
                 return None            
         else:
             return parse_hazard_input_data(in_data_list2)
-                
+                       
 
-    def create_axes(self, subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range ):
-
-        axes = plot_window.canvas.fig.add_subplot( subplot_code )
+    def plot_geodata(self):
         
-        y_min, y_max = plot_y_range
-        axes.set_ylim( y_min, y_max )        
-        if plot_x_range is not None:
-            x_min, x_max = plot_x_range
-            axes.set_xlim( x_min, x_max )
-
-        axes.set_title(geodata_name,  y=1.40)
-        axes.grid(True)
-                           
-        return axes
-
-
-    def extract_values(self, geodata_unit, variables):
-        
-        if variables == self.plot_density_choice_txt:
-            return [geodata_unit[self.density_field_name]]
-        elif variables == self.plot_velocities_choice_txt:
-            return [geodata_unit[self.velocity_p_field_name], geodata_unit[self.velocity_s_field_name]]
-        elif variables == self.plot_Qvalues_choice_txt:
-            return [geodata_unit[self.q_p_field_name], geodata_unit[self.q_s_field_name]]  
-        else:
-            return []  
-
-
-    def variable_legend_label(self, variable_x):
-
-        density_legend = ["density"]
-        velocity_legend = ["Vp", "Vs"]
-        Q_vals_legend = ["Qp", "Qs"]
-                
-        if variable_x == self.plot_density_choice_txt:
-            return density_legend
-        elif variable_x == self.plot_velocities_choice_txt:
-            return velocity_legend
-        elif variable_x == self.plot_Qvalues_choice_txt:
-            return Q_vals_legend
-        elif variable_x == self.plot_undefined_choice_txt:        
-            return []  
-        
-
-    def variable_label(self, variable_x):
-
-        density_label = "density [g/cm3]"
-        velocity_label = "v [km/s]"
-        Q_vals_label = "Q value"
-                
-        if variable_x == self.plot_density_choice_txt:
-            return density_label
-        elif variable_x == self.plot_velocities_choice_txt:
-            return velocity_label
-        elif variable_x == self.plot_Qvalues_choice_txt:
-            return Q_vals_label
-        elif variable_x == self.plot_undefined_choice_txt:        
-            return ""        
-
-
-    def extract_values_range(self, variable_x, geodata_unit):
-                
-        if variable_x == self.plot_density_choice_txt:
-            return self.get_data_range( geodata_unit[self.density_field_name] )
-        elif variable_x == self.plot_velocities_choice_txt:
-            return self.get_data_range( geodata_unit[self.velocity_p_field_name] + geodata_unit[self.velocity_s_field_name])
-        elif variable_x == self.plot_Qvalues_choice_txt:
-            return self.get_data_range( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
-        elif variable_x == self.plot_undefined_choice_txt:        
-            return None
-    
-    
-    def create_plot_lines(self, axes, geodata_unit, variables, colors):
-        
-        var_values = self.extract_values(geodata_unit, variables)
-        variable_y = geodata_unit[self.depth_field_name]   
-        lines = []
-        for variable_x, color in zip(var_values, colors):
-            lines.append( plot_line(axes,
-                         variable_x, 
-                         variable_y, 
-                         color,
-                         drawstyle = "steps-pre") )
-
-        return lines        
-        
-
-    def plot_geodata_unit(self, plot_window, variables_x_btm, variables_x_top, geodata_unit, geodata_name, subplot_code):
-        
-        depth_label = "depth [km]"
-        depth_vals = geodata_unit[self.depth_field_name]
-        
-        
-        var_x_btm_label = self.variable_label( variables_x_btm)
-        var_x_top_label = self.variable_label( variables_x_top)
-        
-        plot_x_btm_range = self.extract_values_range(variables_x_btm, geodata_unit)          
-        plot_x_top_range = self.extract_values_range(variables_x_top, geodata_unit)
-        
-        plot_y_range = self.get_data_range(geodata_unit[self.depth_field_name]) 
+        def extract_data_names(ifile_paths):
             
-        btm_axes = self.create_axes( subplot_code,
-                                  plot_window, 
-                                  geodata_name,
-                                  plot_x_btm_range, 
-                                  plot_y_range  )             
+            return [ifile_path.split(os.sep)[-1].split(".")[0] for ifile_path in ifile_paths]
+    
+        def get_subplot_code(n_recs, n_rec):
+    
+            n_rows = (n_recs + 1) / 2
+            n_cols = 2
+            
+            subplot_code = int("%d%d%d" % (n_rows, n_cols, n_rec))
+            return subplot_code
+            
+        try:
+            point_layer, link_name_field, input_data_type = self.point_layer, self.link_name_field, self.input_data_type
+        except:
+            self.warn("Input data are not defined")
+            return
+
+        _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
+        ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
+                
+        geodata = []
+        for ifile_path in ifile_paths:
+            geodata_rec = self.read_hazard_input_file(ifile_path)
+            if geodata_rec is None:
+                return
+            else:
+                geodata.append(geodata_rec)
+                
+        assert len(geodata) > 0
+        
+        geodata_names = extract_data_names(ifile_paths)        
+        
+        plot_window = MplMainWidget()  # create plot window
+
+        if input_data_type == "layer info":
+            
+            if not self.plot_configs_ok:
+                self.warn("Undefined plot configurations")
+                return
+            else:
+                bottom_variables, top_variables = self.bottom_variables, self.top_variables
+                   
+            # plot profiles
+            for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
+                subplot_code = get_subplot_code(len(geodata), n+1)
+                 
+                self.plot_layerinfo_data_unit(plot_window, 
+                                               bottom_variables,
+                                               top_variables, 
+                                               geodata_unit,
+                                               geodata_name, 
+                                               subplot_code)
+                
+        elif input_data_type == "strong motion":
+            
+            # plot profiles
+            for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
+                subplot_code = get_subplot_code(len(geodata), n+1)
+                
+                self.plot_strongmotion_data_unit(plot_window,
+                                               geodata_unit,
+                                               geodata_name, 
+                                               subplot_code)                
+                
+        else:
+            
+            self.warn("Uncorrect data type")
+            return
+        
+            
+        plot_window.canvas.draw() 
+        
+        self.plot_windows.append( plot_window )
+
+        
+    def plot_layerinfo_data_unit(self, plot_window, variables_x_btm, variables_x_top, geodata_unit, geodata_name, subplot_code):
+    
+        def get_data_range_int(data_list):
+            
+            if data_list is None:
+                return None
+            elif data_list == []:
+                return None
+            else:
+                return 0, ceil(max(data_list))
+            
+        def variable_label(variable_x):
+    
+            density_label = "density [g/cm3]"
+            velocity_label = "v [km/s]"
+            Q_vals_label = "Q value"
+                    
+            if variable_x == self.plot_density_choice_txt:
+                return density_label
+            elif variable_x == self.plot_velocities_choice_txt:
+                return velocity_label
+            elif variable_x == self.plot_Qvalues_choice_txt:
+                return Q_vals_label
+            elif variable_x == self.plot_undefined_choice_txt:        
+                return ""   
+                
+        def extract_values_range(variable_x, geodata_unit):
+                    
+            if variable_x == self.plot_density_choice_txt:
+                return get_data_range_int( geodata_unit[self.density_field_name] )
+            elif variable_x == self.plot_velocities_choice_txt:
+                return get_data_range_int( geodata_unit[self.velocity_p_field_name] + geodata_unit[self.velocity_s_field_name])
+            elif variable_x == self.plot_Qvalues_choice_txt:
+                return get_data_range_int( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
+            elif variable_x == self.plot_undefined_choice_txt:        
+                return None
+ 
+        def variable_legend_label(variable_x):
+    
+            density_legend = ["density"]
+            velocity_legend = ["Vp", "Vs"]
+            Q_vals_legend = ["Qp", "Qs"]
+                    
+            if variable_x == self.plot_density_choice_txt:
+                return density_legend
+            elif variable_x == self.plot_velocities_choice_txt:
+                return velocity_legend
+            elif variable_x == self.plot_Qvalues_choice_txt:
+                return Q_vals_legend
+            elif variable_x == self.plot_undefined_choice_txt:        
+                return []  
+          
+        def create_plot_lines(axes, geodata_unit, variables, colors):
+            
+            def extract_values(geodata_unit, variables):
+                
+                if variables == self.plot_density_choice_txt:
+                    return [geodata_unit[self.density_field_name]]
+                elif variables == self.plot_velocities_choice_txt:
+                    return [geodata_unit[self.velocity_p_field_name], geodata_unit[self.velocity_s_field_name]]
+                elif variables == self.plot_Qvalues_choice_txt:
+                    return [geodata_unit[self.q_p_field_name], geodata_unit[self.q_s_field_name]]  
+                else:
+                    return []  
+            
+            var_values = extract_values(geodata_unit, variables)
+            variable_y = geodata_unit[self.depth_field_name]   
+            lines = []
+            for variable_x, color in zip(var_values, colors):
+                lines.append( plot_line(axes,
+                             variable_x, 
+                             variable_y, 
+                             color,
+                             drawstyle = "steps-pre") )
+
+            return lines   
+            
+        def create_axes(subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range ):
+    
+            axes = plot_window.canvas.fig.add_subplot( subplot_code )
+            
+            y_min, y_max = plot_y_range
+            axes.set_ylim( y_min, y_max )        
+            if plot_x_range is not None:
+                x_min, x_max = plot_x_range
+                axes.set_xlim( x_min, x_max )
+    
+            axes.set_title(geodata_name,  y=1.40)
+            axes.grid(True)
+                               
+            return axes
+                    
+        depth_label = "depth [km]"
+        
+        var_x_btm_label = variable_label( variables_x_btm)
+        var_x_top_label = variable_label( variables_x_top)
+        
+        plot_x_btm_range = extract_values_range(variables_x_btm, geodata_unit)          
+        plot_x_top_range = extract_values_range(variables_x_top, geodata_unit)
+        
+        plot_y_range = get_data_range_int(geodata_unit[self.depth_field_name]) 
+            
+        btm_axes = create_axes( subplot_code,
+                              plot_window, 
+                              geodata_name,
+                              plot_x_btm_range, 
+                              plot_y_range  )             
               
         btm_axes.set_xlabel(var_x_btm_label)
         btm_axes.set_ylabel(depth_label) 
@@ -428,7 +441,7 @@ class EqHazard_QWidget( QWidget ):
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
         colors_x_btm = ["brown", "green"]
-        bottom_lines = self.create_plot_lines(btm_axes, geodata_unit, variables_x_btm, colors_x_btm)
+        bottom_lines = create_plot_lines(btm_axes, geodata_unit, variables_x_btm, colors_x_btm)
 
  
         if plot_x_top_range is not None:
@@ -436,100 +449,81 @@ class EqHazard_QWidget( QWidget ):
             top_axes.set_xlim( *plot_x_top_range )
             top_axes.set_xlabel(var_x_top_label)
             colors_x_top = ["red", "blue"]
-            top_lines = self.create_plot_lines(top_axes, geodata_unit, variables_x_top, colors_x_top)
+            top_lines = create_plot_lines(top_axes, geodata_unit, variables_x_top, colors_x_top)
 
 
-        var_x_btm_legend_label = self.variable_legend_label( variables_x_btm)
-        var_x_top_legend_label = self.variable_legend_label( variables_x_top) 
+        var_x_btm_legend_label = variable_legend_label( variables_x_btm)
+        var_x_top_legend_label = variable_legend_label( variables_x_top) 
  
         if plot_x_top_range is None:
             plot_window.canvas.fig.legend(bottom_lines, var_x_btm_legend_label)
         else:
             plot_window.canvas.fig.legend(bottom_lines + top_lines, var_x_btm_legend_label + var_x_top_legend_label)            
-                      
+    
+    
+    def plot_strongmotion_data_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):        
+    
+        def get_data_range_int(data_list):
+            
+            if data_list is None:
+                return None
+            elif data_list == []:
+                return None
+            else:
+                return floor(min(data_list)), ceil(max(data_list))
+ 
+        def get_data_range_float(data_list):
+            
+            if data_list is None:
+                return None
+            elif data_list == []:
+                return None
+            else:                
+                return floor(min(data_list)*10)/10, ceil(max(data_list)*10)/10
+            
+        def create_plot_line(axes, geodata_unit):
+            
+            variable_x = geodata_unit[self.time_field_name]  
+            variable_y = geodata_unit[self.strongmotion_velocity_field_name]  
+            plot_line(axes,
+                     variable_x, 
+                     variable_y, 
+                     "blue")
+            
+        def create_axes(subplot_code, plot_window, geodata_name, plot_time_range, plot_velocity_range):
+    
+            axes = plot_window.canvas.fig.add_subplot(subplot_code)
+
+            x_min, x_max = plot_time_range
+            axes.set_xlim( x_min, x_max )
                         
-        """
+            y_min, y_max = plot_velocity_range
+            axes.set_ylim( y_min, y_max )        
+    
+            axes.set_title(geodata_name,  y=1.40)
+            axes.grid(True)
+                               
+            return axes
+                    
+        time_label = "time [sec]"        
+        velocity_label = "velocity [km/sec]"
 
-        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
-        top_axes.set_xlim(plot_v_range)
-       
-        top_axes.set_xlabel('v [km/s]')
-   
-        vp_line = plot_line( top_axes,
-                            geodata_unit["Vp (km/s)"], 
-                            y_vals, 
-                            "red",
-                            drawstyle = "steps-pre")     
-            
-        vs_line = plot_line( top_axes,
-                            geodata_unit["Vs (km/s)"], 
-                            y_vals, 
-                            "blue",
-                            drawstyle = "steps-pre")  
-       
-        """
-        
-        
-        
-    def plot_data_unit(self, plot_window, geodata_unit, geodata_name, subplot_code):
-        
-        plot_depth_range = self.get_data_range(geodata_unit["depth (km)"])
-        
-        plot_dens_range = self.get_data_range(geodata_unit["rho"])        
-        
-        btm_axes = self.create_axes( subplot_code,
-                                  plot_window, 
-                                  geodata_name,
-                                  plot_dens_range, 
-                                  plot_depth_range  ) 
-        
-        btm_axes.invert_yaxis()       
-        btm_axes.set_xlabel('density [g/cm3]')
-        btm_axes.set_ylabel('depth [km]') 
-        
+        plot_time_range = get_data_range_int(geodata_unit[self.time_field_name])       
+        plot_velocity_range = get_data_range_float( geodata_unit[self.strongmotion_velocity_field_name] )  
+ 
+        plot_axes = create_axes( subplot_code,
+                              plot_window, 
+                              geodata_name,
+                              plot_time_range,
+                              plot_velocity_range)             
+              
+        plot_axes.set_xlabel(time_label)
+        plot_axes.set_ylabel(velocity_label) 
+      
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
-        
-        y_vals = geodata_unit["depth (km)"]
-                
-        dens_line = plot_line( btm_axes,
-                            geodata_unit["rho"], 
-                            y_vals, 
-                            "brown",
-                            drawstyle = "steps-pre")    
-        
 
-        top_axes = btm_axes.twiny()
-
-        plot_v_range = self.get_data_range(geodata_unit["Vp (km/s)"] + geodata_unit["Vs (km/s)"])
-        top_axes.set_xlim(plot_v_range)
-       
-        top_axes.set_xlabel('v [km/s]')
-   
-        vp_line = plot_line( top_axes,
-                            geodata_unit["Vp (km/s)"], 
-                            y_vals, 
-                            "red",
-                            drawstyle = "steps-pre")     
-            
-        vs_line = plot_line( top_axes,
-                            geodata_unit["Vs (km/s)"], 
-                            y_vals, 
-                            "blue",
-                            drawstyle = "steps-pre")  
-
-             
-        plot_window.canvas.fig.legend([dens_line, vp_line, vs_line], ['density', 'Vp', 'Vs'])
-                      
-        
-    def get_data_range(self, data_list):
-        
-        if data_list is None:
-            return None
-        elif data_list == []:
-            return None
-        else:
-            return 0, ceil(max(data_list))
-                
+        create_plot_line(plot_axes, geodata_unit)
+         
         
     def info(self, msg):
         
@@ -545,9 +539,11 @@ class EqHazard_QWidget( QWidget ):
 class InputLayerDialog( QDialog ):
     
     
-    def __init__(self, parent=None):
+    def __init__(self, input_field_undefined_txt, parent=None):
                 
         super( InputLayerDialog, self ).__init__(parent)
+        
+        self.field_undefined_txt = input_field_undefined_txt
         
         self.setup_gui()
         
@@ -555,7 +551,6 @@ class InputLayerDialog( QDialog ):
     def setup_gui(self):        
         
         self.layer_choose_msg = "choose"
-        self.field_undefined_txt = "---"
  
         layout = QGridLayout()
                         
@@ -594,8 +589,6 @@ class InputLayerDialog( QDialog ):
         self.refresh_input_layer_combobox()
         
         self.input_layers_QComboBox.currentIndexChanged[int].connect(self.refresh_link_field_combobox )
-        
-             
         
         okButton = QPushButton("&OK")
         cancelButton = QPushButton("Cancel")

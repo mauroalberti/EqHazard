@@ -44,7 +44,10 @@ class EqHazard_QWidget( QWidget ):
         self.depth_field_name = "depth (km)"
         self.layer_field_name = "layer"
         
-        self.input_field_names = [self.thickness_field_name,
+        self.time_field_name = "time"
+        self.strongmotion_velocity_field_name = "velocity"
+                
+        self.layerinfo_input_field_names = [self.thickness_field_name,
                                   self.density_field_name,
                                   self.velocity_p_field_name,
                                   self.velocity_s_field_name,
@@ -53,6 +56,8 @@ class EqHazard_QWidget( QWidget ):
                                   self.depth_field_name,
                                   self.layer_field_name]
         
+        self.strongmotion_input_field_names = [self.time_field_name,
+                                               self.strongmotion_velocity_field_name]
         
         
         self.plot_configs_ok = False
@@ -94,12 +99,6 @@ class EqHazard_QWidget( QWidget ):
         processing_QGroupBox = QGroupBox("Processing")
         
         layout = QGridLayout()
-
-        """
-        self.configure_plot_QPushButton = QPushButton(self.tr("Configure plot"))          
-        self.configure_plot_QPushButton.clicked.connect( self.get_plot_configuration )         
-        layout.addWidget(self.configure_plot_QPushButton, 0, 0, 1, 1 )  
-        """      
  
         self.plot_data_QPushButton = QPushButton(self.tr("Plot data"))          
         self.plot_data_QPushButton.clicked.connect( self.plot_geodata )         
@@ -193,21 +192,14 @@ class EqHazard_QWidget( QWidget ):
     def plot_geodata(self):
         
         try:
-            point_layer, link_name_field = self.point_layer, self.link_name_field
+            point_layer, link_name_field, input_data_type = self.point_layer, self.link_name_field, self.input_data_type
         except:
             self.warn("Input data are not defined")
             return
-        
-        if not self.plot_configs_ok:
-            self.warn("Undefined plot configurations")
-            return
-        else:
-            bottom_variables, top_variables = self.bottom_variables, self.top_variables
-        
-        
+
         _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
-        
+                
         geodata = []
         for ifile_path in ifile_paths:
             geodata_rec = self.read_hazard_input_file(ifile_path)
@@ -218,10 +210,17 @@ class EqHazard_QWidget( QWidget ):
                 
         assert len(geodata) > 0
         
-        geodata_names = self.extract_data_names(ifile_paths)
-        # create plot window
-        plot_window = MplMainWidget()  
+        geodata_names = self.extract_data_names(ifile_paths)        
         
+        plot_window = MplMainWidget()  # create plot window
+
+        if not self.plot_configs_ok:
+            self.warn("Undefined plot configurations")
+            return
+        else:
+            bottom_variables, top_variables = self.bottom_variables, self.top_variables
+                   
+        # plot profiles
         for n, (geodata_unit, geodata_name) in enumerate(zip(geodata,geodata_names)): 
             subplot_code = self.get_subplot_code(len(geodata), n+1)
              
@@ -255,7 +254,7 @@ class EqHazard_QWidget( QWidget ):
         
         def parse_hazard_input_data(in_data_list2):
             
-            data_dict = {} # a dict that will contain the lists of values for each field
+            data_dict = {} # a dictionary that will contain the lists of values for each field
             
             for fld_name in fld_names:
                 data_dict[fld_name] = []
@@ -268,25 +267,33 @@ class EqHazard_QWidget( QWidget ):
             return data_dict
 
 
-        def extract_number_values(indata_raw):
+        def extract_number_start_ndx(indata_raw):
             
             for n, indata_row in enumerate(indata_raw):
                 indata_vals = indata_row.split()
                 are_numbers = map(is_number, indata_vals)
                 if reduce(lambda a, b: a and b, are_numbers):
-                    return n, indata_raw[n:]
+                    return n
             
         try:
             with open(file_path, "r") as ifile:
                 indata_raw = ifile.readlines()
         except:
             self.warn("Unable to read input file: %s" % (file_path))
-            return None
-        
+            return None        
 
-        ifile_skip_lines, in_data_vals = extract_number_values(indata_raw)
+        ifile_skip_lines = extract_number_start_ndx(indata_raw)
+        in_data_vals = indata_raw[ifile_skip_lines:]
         
-        fld_names = self.input_field_names
+        if self.input_data_type == "layer info":
+            fld_names = self.layerinfo_input_field_names
+        elif self.input_data_type == "strong motion":
+            fld_names = self.strongmotion_input_field_names        
+        else:
+            self.warn("Uncorrect plot type")
+            return None              
+   
+                
         flds_num = len(fld_names)
         in_data_list2 = []        
         for n, in_data_val in enumerate(in_data_vals):

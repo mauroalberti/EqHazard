@@ -147,41 +147,60 @@ class EqHazard_QWidget( QWidget ):
             self.warn( "Nothing defined")
             return
         
-        if self.input_data_type == "layer info":
-            self.get_plot_configuration()
-            
-            
-    def get_plot_configuration(self):        
         
-        def extract_plot_config(dialog):
+        self.get_config_params()
             
-            bottom_variables = dialog.bottom_variables_QComboBox.currentText()
+            
+    def get_config_params(self):        
+        
+        def extract_plot_layerinfo_config(dialog):
+            
+            bottom_variables = dialog.y_axis_label.currentText()
             top_variables = dialog.top_variables_QComboBox.currentText()       
             
             return bottom_variables, top_variables
-    
         
-        dialog = PlotConfigDialog( self.config_plot_options )
+        def extract_plot_strongmotion_config(dialog):
+            
+            y_axis_measure_type_label = dialog.y_axis_measure_type_label_QLineEdit.text()
+            y_axis_measure_unit_label = dialog.y_axis_measure_unit_label_QLineEdit.text()            
+            
+            return y_axis_measure_type_label, y_axis_measure_unit_label
+        
+    
+        if self.input_data_type == "layer info":
+            dialog = PlotConfigDialog( self.config_plot_options )
+        elif self.input_data_type == "strong motion":            
+            dialog = StrongMotionConfigDialog()
         
         if dialog.exec_():
-            try:
-                self.bottom_variables, self.top_variables = extract_plot_config(dialog)
-            except:
-                self.warn("Error in plot configuration")
-                return
+            if self.input_data_type == "layer info":
+                try:
+                    self.bottom_variables, self.top_variables = extract_plot_layerinfo_config(dialog)
+                except:
+                    self.warn("Error in plot configuration")
+                    return
+            elif self.input_data_type == "strong motion":  
+                try:
+                    self.y_axis_measure_type_label, self.y_axis_measure_unit_label = extract_plot_strongmotion_config(dialog)
+                except:
+                    self.warn("Error in plot configuration")
+                    return                
+                 
         else:
-            self.warn("Undefined plot configuration")
+            self.warn("Undefined configuration")
             return
-        
-        if self.bottom_variables == self.plot_undefined_choice_txt and \
-           self.top_variables == self.plot_undefined_choice_txt:
-            self.warn("No choice for plot configuration")
-            self.plot_configs_ok = False
-        elif self.bottom_variables == self.top_variables:
-            self.warn("Choose different variables")
-            self.plot_configs_ok = False            
-        else:
-            self.plot_configs_ok = True
+ 
+        if self.input_data_type == "layer info":       
+            if self.bottom_variables == self.plot_undefined_choice_txt and \
+               self.top_variables == self.plot_undefined_choice_txt:
+                self.warn("No choice for plot configuration")
+                self.plot_configs_ok = False
+            elif self.bottom_variables == self.top_variables:
+                self.warn("Choose different variables")
+                self.plot_configs_ok = False            
+            else:
+                self.plot_configs_ok = True
     
 
     def read_hazard_input_file(self, file_path):
@@ -506,7 +525,7 @@ class EqHazard_QWidget( QWidget ):
             return axes
                     
         time_label = "time [sec]"        
-        velocity_label = "velocity [km/sec]"
+        y_axis_label = self.y_axis_measure_type_label + " [" + self.y_axis_measure_unit_label + "]"
 
         plot_time_range = get_data_range_int(geodata_unit[self.time_field_name])       
         plot_velocity_range = get_data_range_float( geodata_unit[self.strongmotion_velocity_field_name] )  
@@ -518,7 +537,7 @@ class EqHazard_QWidget( QWidget ):
                               plot_velocity_range)             
               
         plot_axes.set_xlabel(time_label)
-        plot_axes.set_ylabel(velocity_label) 
+        plot_axes.set_ylabel(y_axis_label) 
       
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
 
@@ -673,8 +692,8 @@ class PlotConfigDialog( QDialog ):
         variables_QGridLayout = QGridLayout() 
 
         variables_QGridLayout.addWidget(QLabel("Variable(s)"), 0,0,1,1)         
-        self.bottom_variables_QComboBox = QComboBox()
-        variables_QGridLayout.addWidget(self.bottom_variables_QComboBox, 0,1,1,1) 
+        self.y_axis_label = QComboBox()
+        variables_QGridLayout.addWidget(self.y_axis_label, 0,1,1,1) 
   
         variables_QGridLayout.addWidget(QLabel("Additional variable(s)"), 1,0,1,1)         
         self.top_variables_QComboBox = QComboBox()
@@ -708,11 +727,67 @@ class PlotConfigDialog( QDialog ):
 
     def populate_config_plot_combobox(self):
         
-        self.bottom_variables_QComboBox.insertItems(0, self.config_plot_options[1:])
+        self.y_axis_label.insertItems(0, self.config_plot_options[1:])
         self.top_variables_QComboBox.insertItems(0, self.config_plot_options) 
               
 
 
+class StrongMotionConfigDialog( QDialog ):
+    
+            
+    def __init__(self, parent=None):
+                
+        super( StrongMotionConfigDialog, self ).__init__(parent)
+        
+        self.setup_gui()
+        
+        
+    def setup_gui(self):        
+        
+        default_measure_type_label = "velocity"
+        default_measure_unit_label = "km/sec"
+        
+        layout = QGridLayout()
+                        
+        # plot variables
+        
+        axeslabel_QGroupBox = QGroupBox("Y axis labels")
+        axeslabel_QGridLayout = QGridLayout() 
+
+        axeslabel_QGridLayout.addWidget(QLabel("y-axis measure type"), 0,0,1,1)         
+        self.y_axis_measure_type_label_QLineEdit = QLineEdit(default_measure_type_label)
+        axeslabel_QGridLayout.addWidget(self.y_axis_measure_type_label_QLineEdit, 0,1,1,1) 
+
+        axeslabel_QGridLayout.addWidget(QLabel("y-axis measure unit"), 1,0,1,1)         
+        self.y_axis_measure_unit_label_QLineEdit = QLineEdit(default_measure_unit_label)
+        axeslabel_QGridLayout.addWidget(self.y_axis_measure_unit_label_QLineEdit, 1,1,1,1)           
+              
+        axeslabel_QGroupBox.setLayout(axeslabel_QGridLayout)              
+        layout.addWidget(axeslabel_QGroupBox, 0,0,1,2)          
+        
+        okButton = QPushButton("&OK")
+        cancelButton = QPushButton("Cancel")
+
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addStretch()
+        buttonLayout.addWidget(okButton)
+        buttonLayout.addWidget(cancelButton)
+              
+        layout.addLayout( buttonLayout, 5, 0, 1, 2 )
+        
+        self.setLayout( layout )
+
+        self.connect(okButton, SIGNAL("clicked()"),
+                     self,  SLOT("accept()") )
+        self.connect(cancelButton, SIGNAL("clicked()"),
+                     self, SLOT("reject()"))
+        
+        self.setWindowTitle("Axes labels")
+
+              
+
+
+        
         
 
 

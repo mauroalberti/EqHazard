@@ -459,7 +459,7 @@ class EqHazard_QWidget( QWidget ):
         btm_axes.invert_yaxis()         
         plot_window.canvas.fig.tight_layout(pad=0.1, w_pad=0.05, h_pad=1.0)
         
-        colors_x_btm = ["brown", "green"]
+        colors_x_btm = ["orange", "green"]
         bottom_lines = create_plot_lines(btm_axes, geodata_unit, variables_x_btm, colors_x_btm)
 
  

@@ -5,6 +5,8 @@ from __future__ import division
 import os
 from math import ceil, floor
 
+import webbrowser
+
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
@@ -76,7 +78,8 @@ class EqHazard_QWidget( QWidget ):
         
         self.dialog_layout.addWidget( self.setup_inputdata() )
         self.dialog_layout.addWidget( self.setup_processing() )        
-                                                           
+        self.dialog_layout.addWidget( self.setup_help() ) 
+                                                                   
         self.setLayout(self.dialog_layout)            
         self.adjustSize()               
         self.setWindowTitle(self.plugin_name)        
@@ -88,9 +91,9 @@ class EqHazard_QWidget( QWidget ):
         
         layout = QVBoxLayout() 
         
-        self.read_input_data_QPushButton = QPushButton(self.tr("Read input file"))  
-        self.read_input_data_QPushButton.clicked.connect( self.get_input_data_def ) 
-        layout.addWidget(self.read_input_data_QPushButton )
+        self.help_QPushButton = QPushButton(self.tr("Read input file"))  
+        self.help_QPushButton.clicked.connect( self.get_input_data_def ) 
+        layout.addWidget(self.help_QPushButton )
         
         input_QGroupBox.setLayout(layout)
         
@@ -110,8 +113,30 @@ class EqHazard_QWidget( QWidget ):
         processing_QGroupBox.setLayout(layout)
         
         return processing_QGroupBox
-    
 
+
+    def setup_help(self):
+        
+        help_QGroupBox = QGroupBox("Help")
+        
+        layout = QVBoxLayout() 
+        
+        self.help_QPushButton = QPushButton(self.tr("Open help"))  
+        self.help_QPushButton.clicked.connect( self.open_html_help ) 
+        layout.addWidget(self.help_QPushButton )
+        
+        help_QGroupBox.setLayout(layout)
+        
+        return help_QGroupBox
+        
+
+    def open_html_help( self ):        
+
+        webbrowser.open('{}/help.html'.format(os.path.dirname(__file__)), new = True )
+          
+        
+    
+        
     def get_input_data_def( self ):
                  
         def extract_input_info_data(dialog ):

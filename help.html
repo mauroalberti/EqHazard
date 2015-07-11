@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+<h1 id="eqhazard">EqHazard</h1>
+<p>A QGIS Python plugin for the visualization of earthquake hazard data profiles.</p>
+<div class="figure">
+<img src="./help/ims/screenshot_layer_info.png" alt="Layer info plot" />
+<p class="caption">Layer info plot</p>
+</div>
+<p>Data sources are listed (as file paths) in the attribute table of a point layer. Only data of selected points (records) will be plotted.</p>
+<p>Two types of data info can be visualised, by choosing the relevant source field: - <em>layer info</em>: density, velocities and Q values can be plotted against depth - <em>strong motion data</em>: time vs. velocity plots</p>
+<div class="figure">
+<img src="./help/ims/screenshot_attribute%20table.png" alt="Attribute table" />
+<p class="caption">Attribute table</p>
+</div>
+<p><strong>Input file format</strong></p>
+<p>For layer info, data in the source files are organised as in the example:</p>
+<pre><code>vp and vs rho depth thk till 1100 km only changed
+
+thk(km) rho   Vp(km/s)  Vs(km/s)    Qp       Qs     depth(km) layer
+
+2.0000 2.45  4.300000  2.530000   225.00   100.00    0.00000   1
+
+4.0000 2.50  4.600000  3.400000   225.00   100.00    2.00000   2
+
+6.0000 2.76  5.900000  3.500000   225.01   100.00    6.00000   3
+
+12.0000 2.87  6.450000  3.800000   225.00   100.00   12.00000   4
+
+6.0000 2.90  6.500000  3.900000   225.00   100.00   24.00000   5 
+
+10.0000 3.15  7.300000  4.300000  1000.00   450.00   30.50000   6
+
+10.0000 3.27  7.800000  4.600000  1000.00   450.00   40.00000   7
+
+30.0000 3.35  8.100000  4.700000  1000.00   450.00   50.00000   8 </code></pre>
+<p>For strong motion data, source files are as in the following example:</p>
+<pre><code>#   time    velocity
+
+  0.000000E+00    0.608998E-03
+  
+  0.341797E+00   -0.653854E-03
+  
+  0.683594E+00   -0.147770E-02
+  
+  0.102539E+01    0.623775E-03
+  
+  0.136719E+01   -0.882788E-03
+  
+  0.170898E+01   -0.138714E-02
+  
+  0.205078E+01    0.584612E-03
+  
+  0.239258E+01   -0.145040E-02
+  
+  0.273438E+01   -0.158983E-02</code></pre>
+</body>
+</html>

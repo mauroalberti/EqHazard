@@ -12,7 +12,7 @@ Two types of data info can be visualised, by choosing the relevant source field:
 - strong motion data: time vs. velocity plots
 
 
-Input file format
+**Input file format**
 
 For layer info, data in the source files are organised as in the example:
 

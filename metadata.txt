@@ -2,8 +2,8 @@
 name=EqHazard
 description=Plot of earthquake hazard data
 category=Vector 
-version=0.0.1
-experimental=True
+version=0.0.7
+experimental=False
 qgisMinimumVersion=2.0
 author=Mauro Alberti, Hany Mohammed Hassan
 email=alberti.m65@gmail.com
@@ -13,7 +13,8 @@ icon=./icons/icon.png
 
 ; start of optional metadata
 changelog=
-  0.0.1 : - first alpha version
+  0.0.1: first alpha version
+  0.0.7: first QGIS release 
 
 ; tags are in comma separated value format, spaces are allowed
 tags = seismic hazard, plot, earthquake

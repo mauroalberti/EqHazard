@@ -16,6 +16,7 @@ Input file format
 
 For layer info, data in the source files are organised as in the example:
 
+
 vp and vs rho depth thk till 1100 km only changed
 
 thk(km) rho   Vp(km/s)  Vs(km/s)    Qp       Qs     depth(km) layer
@@ -38,7 +39,9 @@ thk(km) rho   Vp(km/s)  Vs(km/s)    Qp       Qs     depth(km) layer
   
 
 
+
 For strong motion data, source files are as in the following example:
+
 
  #	time	velocity
  

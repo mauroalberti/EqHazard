@@ -6,6 +6,8 @@ A QGIS Python plugin for the visualization of earthquake hazard data profiles.
 
 
 Data sources are listed (as file paths) in the attribute table of a point layer.
+Only data of selected points (records) will be plotted.
+
 Two types of data info can be visualised, by choosing the relevant source field: 
 - *layer info*: density, velocities and Q values can be plotted against depth
 - *strong motion data*: time vs. velocity plots

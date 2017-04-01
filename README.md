@@ -12,7 +12,7 @@ Two types of data info can be visualised, by choosing the relevant source field:
 - *layer info*: density, velocities and Q values can be plotted against depth
 - *strong motion data*: time vs. velocity plots
 
-![Attribute table](./help/ims/screenshot_attribute table.png)
+![Attribute table](./help/ims/screenshot_attribute_table.png)
 
 
 **Input file format**

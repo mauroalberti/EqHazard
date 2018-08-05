@@ -1,12 +1,16 @@
+from __future__ import absolute_import
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from builtins import object
+
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
+from qgis.PyQt.QtWidgets import *
 
 from qgis.core import *
 
-from EqHazard_QWidget import EqHazard_QWidget
+from .EqHazard_QWidget import EqHazard_QWidget
 
-import resources
+from . import resources
 
 
 class EqHazard_gui(object):

@@ -1,20 +1,17 @@
 """
-        
-        This file contains modified code from Tosi book - Matplotlib for Python Developers
-        
+    This file contains  code modified from Tosi book - Matplotlib for Python Developers
 """
 
-
-from __future__  import division
+from __future__ import division
 
 import numpy as np
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
+from qgis.PyQt.QtWidgets import *
 
+from matplotlib import rcParams
 
-from matplotlib import rcParams #  cm
-#import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 # Matplotlib version change leads to name change

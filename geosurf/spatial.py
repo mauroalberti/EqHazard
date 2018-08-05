@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from __future__  import division
+from __future__ import division
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import zip
+from builtins import range
+from builtins import object
 from math import sqrt, floor, ceil, sin, cos, tan, radians, asin, acos, atan, atan2, degrees, isnan
 
 
@@ -14,8 +19,9 @@ from qgis.core import QgsCoordinateTransform, QgsPoint
 
 from .qgs_tools import project_qgs_point, qgs_point_2d 
 from .utils import array_from_function, almost_zero
-from array_utils import point_solution, formula_to_grid
+from .array_utils import point_solution, formula_to_grid
 from .errors import AnaliticSurfaceIOException, AnaliticSurfaceCalcException
+from functools import reduce
 
 
 MINIMUM_SEPARATION_THRESHOLD = 1e-10
@@ -353,7 +359,7 @@ class Line2D( object ):
 
     def to_segments( self ):
 
-        pts_pairs = zip( self._pts[:-1], self._pts[1:] )
+        pts_pairs = list(zip( self._pts[:-1], self._pts[1:] ))
         return [ Segment2D( pt_a, pt_b ) for ( pt_a, pt_b ) in pts_pairs ]
         
         
@@ -422,7 +428,7 @@ class MultiLine2D(object):
     
     def num_points( self ):
 
-        num_elements = map( lambda x: len( x._pts ), self._lines )
+        num_elements = [len( x._pts ) for x in self._lines]
         return reduce( lambda x, y: x + y, num_elements )
     
 
@@ -1859,8 +1865,8 @@ class Grid(object):
             ycoords_y = np.where( ycoords_y < xcoords_y , np.NaN, ycoords_y )           
             ycoords_y = np.where( ycoords_y >= xcoords_y + self.cellsize_y() , np.NaN, ycoords_y )            
 
-            for i in xrange(xcoords_x.shape[0]):
-                for j in xrange(xcoords_x.shape[1]):
+            for i in range(xcoords_x.shape[0]):
+                for j in range(xcoords_x.shape[1]):
                     if abs(xcoords_x[i,j]-ycoords_x[i,j])<1.0e-5 and abs(ycoords_y[i,j]-xcoords_y[i,j])<1.0e-5:
                         ycoords_y[i,j] = np.NaN
                                                          
@@ -1979,8 +1985,8 @@ class AnalyticGeosurface( object ):
         # calculate array from formula    
         try:
             self.X, self.Y, self.Z = formula_to_grid( array_range, array_size, formula ) 
-        except AnaliticSurfaceCalcException, msg:
-            raise AnaliticSurfaceCalcException, msg
+        except AnaliticSurfaceCalcException as msg:
+            raise AnaliticSurfaceCalcException(msg)
                 
         # calculate geographic transformations to surface
         self.geographical_values = self.get_geographical_param_values()
@@ -2036,16 +2042,16 @@ class AnalyticGeosurface( object ):
             
             formula = str( self.analytical_params['formula'] )           
         except:
-            raise AnaliticSurfaceIOException, "Analytical value error"                     
+            raise AnaliticSurfaceIOException("Analytical value error")                     
     
         if a_min >= a_max or b_min >= b_max:
-            raise AnaliticSurfaceIOException, "Input a and b value error" 
+            raise AnaliticSurfaceIOException("Input a and b value error") 
     
         if grid_cols <= 0 or grid_rows <= 0:
-            raise AnaliticSurfaceIOException, "Grid column/row value error"                 
+            raise AnaliticSurfaceIOException("Grid column/row value error")                 
         
         if formula == '':
-            raise AnaliticSurfaceIOException, "Input analytical formula error"
+            raise AnaliticSurfaceIOException("Input analytical formula error")
         
         return (a_min,a_max,b_min,b_max), (grid_rows,grid_cols), formula      
     
@@ -2059,7 +2065,7 @@ class AnalyticGeosurface( object ):
             grid_width = float( self.geographical_params['grid width'] )
             grid_rot_angle_degr = float( self.geographical_params['grid rot angle degr'] )
         except:
-            raise AnaliticSurfaceIOException, "Input geographic value error"            
+            raise AnaliticSurfaceIOException("Input geographic value error")            
     
         return (geog_x_min,geog_y_min), (grid_height,grid_width), grid_rot_angle_degr
     

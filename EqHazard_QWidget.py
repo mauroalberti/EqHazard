@@ -1,30 +1,34 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
+from __future__ import absolute_import
+
+from builtins import zip
+from builtins import map
+
+from functools import reduce
 
 import os
 from math import ceil, floor
 
 import webbrowser
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
+from qgis.PyQt.QtWidgets import *
 
-from qgis.core import QgsMapLayerRegistry
-
-from geosurf.qgs_tools import loaded_point_layers, get_point_data
-from geosurf.utils import is_number
-from mpl.mpl_widget import MplMainWidget, plot_line
+from .geosurf.qgs_tools import loaded_point_layers, get_point_data
+from .geosurf.utils import is_number
+from .mpl.mpl_widget import MplMainWidget, plot_line
 
 
-       
-class EqHazard_QWidget( QWidget ):
+class EqHazard_QWidget(QWidget):
     
       
     
-    def __init__( self, canvas, plugin_name ):
+    def __init__(self, canvas, plugin_name):
 
-        super( EqHazard_QWidget, self ).__init__() 
+        super(EqHazard_QWidget, self).__init__() 
         self.mapcanvas = canvas        
         self.plugin_name = plugin_name 
         
@@ -72,13 +76,13 @@ class EqHazard_QWidget( QWidget ):
         self.setup_gui()
 
                       
-    def setup_gui( self ): 
+    def setup_gui(self): 
 
         self.dialog_layout = QHBoxLayout()
         
-        self.dialog_layout.addWidget( self.setup_inputdata() )
-        self.dialog_layout.addWidget( self.setup_processing() )        
-        self.dialog_layout.addWidget( self.setup_help() ) 
+        self.dialog_layout.addWidget(self.setup_inputdata())
+        self.dialog_layout.addWidget(self.setup_processing())        
+        self.dialog_layout.addWidget(self.setup_help()) 
                                                                    
         self.setLayout(self.dialog_layout)            
         self.adjustSize()               
@@ -92,8 +96,8 @@ class EqHazard_QWidget( QWidget ):
         layout = QVBoxLayout() 
         
         self.help_QPushButton = QPushButton(self.tr("Read input file"))  
-        self.help_QPushButton.clicked.connect( self.get_input_data_def ) 
-        layout.addWidget(self.help_QPushButton )
+        self.help_QPushButton.clicked.connect(self.get_input_data_def) 
+        layout.addWidget(self.help_QPushButton)
         
         input_QGroupBox.setLayout(layout)
         
@@ -107,8 +111,8 @@ class EqHazard_QWidget( QWidget ):
         layout = QGridLayout()
  
         self.plot_data_QPushButton = QPushButton(self.tr("Plot data"))          
-        self.plot_data_QPushButton.clicked.connect( self.plot_geodata )         
-        layout.addWidget(self.plot_data_QPushButton, 0, 0, 1, 1 ) 
+        self.plot_data_QPushButton.clicked.connect(self.plot_geodata)         
+        layout.addWidget(self.plot_data_QPushButton, 0, 0, 1, 1) 
                        
         processing_QGroupBox.setLayout(layout)
         
@@ -122,24 +126,21 @@ class EqHazard_QWidget( QWidget ):
         layout = QVBoxLayout() 
         
         self.help_QPushButton = QPushButton(self.tr("Open help"))  
-        self.help_QPushButton.clicked.connect( self.open_html_help ) 
-        layout.addWidget(self.help_QPushButton )
+        self.help_QPushButton.clicked.connect(self.open_html_help) 
+        layout.addWidget(self.help_QPushButton)
         
         help_QGroupBox.setLayout(layout)
         
         return help_QGroupBox
-        
 
-    def open_html_help( self ):        
+    def open_html_help(self):        
 
-        webbrowser.open('{}/help.html'.format(os.path.dirname(__file__)), new = True )
-          
-        
-    
-        
-    def get_input_data_def( self ):
+        dialog = HelpDialog(self.plugin_name)
+        dialog.exec_()
+
+    def get_input_data_def(self):
                  
-        def extract_input_info_data(dialog ):
+        def extract_input_info_data(dialog):
             
             point_layer = dialog.point_layer        
             link_name_field = dialog.link_field_QComboBox.currentText()
@@ -162,14 +163,14 @@ class EqHazard_QWidget( QWidget ):
 
         if dialog.exec_():
             try:
-                self.point_layer, self.link_name_field, self.input_data_type = extract_input_info_data( dialog )
+                self.point_layer, self.link_name_field, self.input_data_type = extract_input_info_data(dialog)
                 assert self.link_name_field != self.input_field_undefined_txt
                 assert self.input_data_type in ("layer info", "strong motion")
             except:
-                self.warn( "Input error")
+                self.warn("Input error")
                 return 
         else:
-            self.warn( "Nothing defined")
+            self.warn("Nothing defined")
             return
         
         
@@ -194,7 +195,7 @@ class EqHazard_QWidget( QWidget ):
         
     
         if self.input_data_type == "layer info":
-            dialog = PlotConfigDialog( self.config_plot_options )
+            dialog = PlotConfigDialog(self.config_plot_options)
         elif self.input_data_type == "strong motion":            
             dialog = StrongMotionConfigDialog()
         
@@ -249,7 +250,7 @@ class EqHazard_QWidget( QWidget ):
             
             for n, indata_row in enumerate(indata_raw):
                 indata_vals = indata_row.split()
-                are_numbers = map(is_number, indata_vals)
+                are_numbers = list(map(is_number, indata_vals))
                 if reduce(lambda a, b: a and b, are_numbers):
                     return n
             
@@ -312,7 +313,7 @@ class EqHazard_QWidget( QWidget ):
             self.warn("Input data are not defined")
             return
 
-        _, rec_values_Lst2 = get_point_data( point_layer, [link_name_field])
+        _, rec_values_Lst2 = get_point_data(point_layer, [link_name_field])
         ifile_paths = [rec_values[-1] for rec_values in rec_values_Lst2]
                 
         geodata = []
@@ -367,7 +368,7 @@ class EqHazard_QWidget( QWidget ):
             
         plot_window.canvas.draw() 
         
-        self.plot_windows.append( plot_window )
+        self.plot_windows.append(plot_window)
 
         
     def plot_layerinfo_data_unit(self, plot_window, variables_x_btm, variables_x_top, geodata_unit, geodata_name, subplot_code):
@@ -399,11 +400,11 @@ class EqHazard_QWidget( QWidget ):
         def extract_values_range(variable_x, geodata_unit):
                     
             if variable_x == self.plot_density_choice_txt:
-                return get_data_range_int( geodata_unit[self.density_field_name] )
+                return get_data_range_int(geodata_unit[self.density_field_name])
             elif variable_x == self.plot_velocities_choice_txt:
-                return get_data_range_int( geodata_unit[self.velocity_p_field_name] + geodata_unit[self.velocity_s_field_name])
+                return get_data_range_int(geodata_unit[self.velocity_p_field_name] + geodata_unit[self.velocity_s_field_name])
             elif variable_x == self.plot_Qvalues_choice_txt:
-                return get_data_range_int( geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
+                return get_data_range_int(geodata_unit[self.q_p_field_name] + geodata_unit[self.q_s_field_name])
             elif variable_x == self.plot_undefined_choice_txt:        
                 return None
  
@@ -439,23 +440,23 @@ class EqHazard_QWidget( QWidget ):
             variable_y = geodata_unit[self.depth_field_name]   
             lines = []
             for variable_x, color in zip(var_values, colors):
-                lines.append( plot_line(axes,
+                lines.append(plot_line(axes,
                              variable_x, 
                              variable_y, 
                              color,
-                             drawstyle = "steps-pre") )
+                             drawstyle = "steps-pre"))
 
             return lines   
             
-        def create_axes(subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range ):
+        def create_axes(subplot_code, plot_window, geodata_name, plot_x_range, plot_y_range):
     
-            axes = plot_window.canvas.fig.add_subplot( subplot_code )
+            axes = plot_window.canvas.fig.add_subplot(subplot_code)
             
             y_min, y_max = plot_y_range
-            axes.set_ylim( y_min, y_max )        
+            axes.set_ylim(y_min, y_max)        
             if plot_x_range is not None:
                 x_min, x_max = plot_x_range
-                axes.set_xlim( x_min, x_max )
+                axes.set_xlim(x_min, x_max)
     
             axes.set_title(geodata_name,  y=1.40)
             axes.grid(True)
@@ -464,19 +465,19 @@ class EqHazard_QWidget( QWidget ):
                     
         depth_label = "depth [km]"
         
-        var_x_btm_label = variable_label( variables_x_btm)
-        var_x_top_label = variable_label( variables_x_top)
+        var_x_btm_label = variable_label(variables_x_btm)
+        var_x_top_label = variable_label(variables_x_top)
         
         plot_x_btm_range = extract_values_range(variables_x_btm, geodata_unit)          
         plot_x_top_range = extract_values_range(variables_x_top, geodata_unit)
         
         plot_y_range = get_data_range_int(geodata_unit[self.depth_field_name]) 
             
-        btm_axes = create_axes( subplot_code,
+        btm_axes = create_axes(subplot_code,
                               plot_window, 
                               geodata_name,
                               plot_x_btm_range, 
-                              plot_y_range  )             
+                              plot_y_range )             
               
         btm_axes.set_xlabel(var_x_btm_label)
         btm_axes.set_ylabel(depth_label) 
@@ -490,14 +491,14 @@ class EqHazard_QWidget( QWidget ):
  
         if plot_x_top_range is not None:
             top_axes = btm_axes.twiny()
-            top_axes.set_xlim( *plot_x_top_range )
+            top_axes.set_xlim(*plot_x_top_range)
             top_axes.set_xlabel(var_x_top_label)
             colors_x_top = ["red", "blue"]
             top_lines = create_plot_lines(top_axes, geodata_unit, variables_x_top, colors_x_top)
 
 
-        var_x_btm_legend_label = variable_legend_label( variables_x_btm)
-        var_x_top_legend_label = variable_legend_label( variables_x_top) 
+        var_x_btm_legend_label = variable_legend_label(variables_x_btm)
+        var_x_top_legend_label = variable_legend_label(variables_x_top) 
  
         if plot_x_top_range is None:
             plot_window.canvas.fig.legend(bottom_lines, var_x_btm_legend_label)
@@ -539,10 +540,10 @@ class EqHazard_QWidget( QWidget ):
             axes = plot_window.canvas.fig.add_subplot(subplot_code)
 
             x_min, x_max = plot_time_range
-            axes.set_xlim( x_min, x_max )
+            axes.set_xlim(x_min, x_max)
                         
             y_min, y_max = plot_velocity_range
-            axes.set_ylim( y_min, y_max )        
+            axes.set_ylim(y_min, y_max)        
     
             axes.set_title(geodata_name,  y=1.40)
             axes.grid(True)
@@ -553,9 +554,9 @@ class EqHazard_QWidget( QWidget ):
         y_axis_label = self.y_axis_measure_type_label + " [" + self.y_axis_measure_unit_label + "]"
 
         plot_time_range = get_data_range_int(geodata_unit[self.time_field_name])       
-        plot_velocity_range = get_data_range_float( geodata_unit[self.strongmotion_velocity_field_name] )  
+        plot_velocity_range = get_data_range_float(geodata_unit[self.strongmotion_velocity_field_name])  
  
-        plot_axes = create_axes( subplot_code,
+        plot_axes = create_axes(subplot_code,
                               plot_window, 
                               geodata_name,
                               plot_time_range,
@@ -571,21 +572,21 @@ class EqHazard_QWidget( QWidget ):
         
     def info(self, msg):
         
-        QMessageBox.information( self,  self.plugin_name, msg )
+        QMessageBox.information(self,  self.plugin_name, msg)
         
         
-    def warn( self, msg):
+    def warn(self, msg):
     
-        QMessageBox.warning( self,  self.plugin_name, msg )
+        QMessageBox.warning(self,  self.plugin_name, msg)
         
         
         
-class InputLayerDialog( QDialog ):
+class InputLayerDialog(QDialog):
     
     
     def __init__(self, input_field_undefined_txt, parent=None):
                 
-        super( InputLayerDialog, self ).__init__(parent)
+        super(InputLayerDialog, self).__init__(parent)
         
         self.field_undefined_txt = input_field_undefined_txt
         
@@ -632,7 +633,7 @@ class InputLayerDialog( QDialog ):
                 
         self.refresh_input_layer_combobox()
         
-        self.input_layers_QComboBox.currentIndexChanged[int].connect(self.refresh_link_field_combobox )
+        self.input_layers_QComboBox.currentIndexChanged[int].connect(self.refresh_link_field_combobox)
         
         okButton = QPushButton("&OK")
         cancelButton = QPushButton("Cancel")
@@ -642,38 +643,32 @@ class InputLayerDialog( QDialog ):
         buttonLayout.addWidget(okButton)
         buttonLayout.addWidget(cancelButton)
               
-        layout.addLayout( buttonLayout, 5, 0, 1, 2 )
+        layout.addLayout(buttonLayout, 5, 0, 1, 2)
         
-        self.setLayout( layout )
+        self.setLayout(layout)
 
-        self.connect(okButton, SIGNAL("clicked()"),
-                     self,  SLOT("accept()") )
-        self.connect(cancelButton, SIGNAL("clicked()"),
-                     self, SLOT("reject()"))
+        okButton.clicked.connect(self.accept)
+        cancelButton.clicked.connect(self.reject)
         
         self.setWindowTitle("Source layer")
-
-
 
     def refresh_input_layer_combobox(self):
 
         self.pointLayers = loaded_point_layers()
         self.input_layers_QComboBox.clear()        
         
-        self.input_layers_QComboBox.addItem( self.layer_choose_msg )
-        self.input_layers_QComboBox.addItems( [ layer.name() for layer in self.pointLayers ] ) 
+        self.input_layers_QComboBox.addItem(self.layer_choose_msg)
+        self.input_layers_QComboBox.addItems([layer.name() for layer in self.pointLayers])
         
         self.reset_link_field_combobox()
-         
-         
-    def reset_link_field_combobox(self):        
-        
+
+    def reset_link_field_combobox(self):
 
         self.link_field_QComboBox.clear()
         self.link_field_QComboBox.addItem(self.field_undefined_txt)
             
                      
-    def refresh_link_field_combobox( self ):
+    def refresh_link_field_combobox(self):
         
         self.reset_link_field_combobox()
 
@@ -681,9 +676,9 @@ class InputLayerDialog( QDialog ):
         if point_shape_qgis_ndx == -1:
             return
         
-        self.point_layer = self.pointLayers[ point_shape_qgis_ndx ]
+        self.point_layer = self.pointLayers[point_shape_qgis_ndx]
        
-        point_layer_field_list = self.point_layer.dataProvider().fields().toList( ) 
+        point_layer_field_list = self.point_layer.dataProvider().fields().toList() 
                
         field_names = [field.name() for field in point_layer_field_list]
         
@@ -693,13 +688,13 @@ class InputLayerDialog( QDialog ):
     
   
 
-class PlotConfigDialog( QDialog ):
+class PlotConfigDialog(QDialog):
     
         
             
     def __init__(self, config_plot_options, parent=None):
                 
-        super( PlotConfigDialog, self ).__init__(parent)
+        super(PlotConfigDialog, self).__init__(parent)
         
         self.config_plot_options = config_plot_options
         
@@ -737,36 +732,29 @@ class PlotConfigDialog( QDialog ):
         buttonLayout.addWidget(okButton)
         buttonLayout.addWidget(cancelButton)
               
-        layout.addLayout( buttonLayout, 5, 0, 1, 2 )
+        layout.addLayout(buttonLayout, 5, 0, 1, 2)
         
-        self.setLayout( layout )
+        self.setLayout(layout)
 
-        self.connect(okButton, SIGNAL("clicked()"),
-                     self,  SLOT("accept()") )
-        self.connect(cancelButton, SIGNAL("clicked()"),
-                     self, SLOT("reject()"))
+        okButton.clicked.connect(self.accept)
+        cancelButton.clicked.connect(self.reject)
         
         self.setWindowTitle("Plot variables")
-
-
 
     def populate_config_plot_combobox(self):
         
         self.y_axis_label.insertItems(0, self.config_plot_options[1:])
         self.top_variables_QComboBox.insertItems(0, self.config_plot_options) 
-              
 
 
-class StrongMotionConfigDialog( QDialog ):
-    
-            
+class StrongMotionConfigDialog(QDialog):
+
     def __init__(self, parent=None):
                 
-        super( StrongMotionConfigDialog, self ).__init__(parent)
+        super(StrongMotionConfigDialog, self).__init__(parent)
         
         self.setup_gui()
-        
-        
+
     def setup_gui(self):        
         
         default_measure_type_label = "velocity"
@@ -798,19 +786,36 @@ class StrongMotionConfigDialog( QDialog ):
         buttonLayout.addWidget(okButton)
         buttonLayout.addWidget(cancelButton)
               
-        layout.addLayout( buttonLayout, 5, 0, 1, 2 )
+        layout.addLayout(buttonLayout, 5, 0, 1, 2)
         
-        self.setLayout( layout )
+        self.setLayout(layout)
 
-        self.connect(okButton, SIGNAL("clicked()"),
-                     self,  SLOT("accept()") )
-        self.connect(cancelButton, SIGNAL("clicked()"),
-                     self, SLOT("reject()"))
+        okButton.clicked.connect(self.accept)
+        cancelButton.clicked.connect(self.reject)
         
         self.setWindowTitle("Axes labels")
 
               
+class HelpDialog(QDialog):
 
+    def __init__(self, plugin_name, parent=None):
+
+        super(HelpDialog, self).__init__(parent)
+
+        layout = QVBoxLayout()
+
+        # About section
+
+        helpTextBrwsr = QTextBrowser(self)
+
+        helpTextBrwsr.setSource(QUrl('{}/help/help.html'.format(os.path.dirname(__file__))))
+        helpTextBrwsr.setSearchPaths(['{}/help'.format(os.path.dirname(__file__))])
+
+        layout.addWidget(helpTextBrwsr)
+
+        self.setLayout(layout)
+
+        self.setWindowTitle("{} Help".format(plugin_name))
 
         
         

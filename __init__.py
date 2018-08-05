@@ -30,8 +30,9 @@
  ***************************************************************************/
 """
 
+from __future__ import absolute_import
 
-from EqHazard_gui import EqHazard_gui
+from .EqHazard_gui import EqHazard_gui
 
 
 def classFactory(iface):    

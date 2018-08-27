@@ -3,7 +3,7 @@ name=EqHazard
 description=Plot of earthquake hazard data
 about=EqHazards allows to plot selected earthquake-related data. Currently it is possible to plot time-series data, as well as strong motion data. Data paths are linked in text fields in the attribute table of a point layer.
 category=Vector 
-version=0.1.0
+version=0.1.1
 experimental=False
 qgisMinimumVersion=3.0
 author=Mauro Alberti, Hany Mohammed Hassan
@@ -14,6 +14,7 @@ icon=./icons/icon.png
 
 ; start of optional metadata
 changelog=
+  0.1.1: fixes Help visuaization problem in Windows
   0.1.0: porting to QGIS 3
   0.0.8: removed bug related to Matplotlib API change
   0.0.7: first QGIS release

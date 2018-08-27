@@ -808,7 +808,8 @@ class HelpDialog(QDialog):
 
         helpTextBrwsr = QTextBrowser(self)
 
-        helpTextBrwsr.setSource(QUrl('{}/help/help.html'.format(os.path.dirname(__file__))))
+        url_path = "file:///{}/help/help.html".format(os.path.dirname(__file__))
+        helpTextBrwsr.setSource(QUrl(url_path))
         helpTextBrwsr.setSearchPaths(['{}/help'.format(os.path.dirname(__file__))])
 
         layout.addWidget(helpTextBrwsr)
